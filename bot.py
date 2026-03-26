@@ -13,6 +13,12 @@ from aiogram.types import (
     ReplyKeyboardRemove
 )
 
+# Фиксация для Windows
+import sys
+import platform
+if platform.system() == 'Windows':
+    asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
+
 # ============================================================
 # НАСТРОЙКИ
 # ============================================================
@@ -187,6 +193,15 @@ class UserStates(StatesGroup):
     waiting_payment_confirmation = State()
 
 # ============================================================
+# ЗВЁЗДЫ — цены по тарифам
+# ============================================================
+STARS_PRICES = {
+    "osint": {"basic": 50, "mid": 100, "vip": 250},
+    "sniper": {"basic": 75, "mid": 200, "strong": 500},
+    "edu": {"basic": 50, "mid": 150, "vip": 250},
+}
+
+# ============================================================
 # КЛАВИАТУРЫ
 # ============================================================
 def main_menu_kb(user_id=None):
@@ -234,7 +249,8 @@ def edu_kb():
 
 def payment_confirmation_kb(invoice_url, amount, label):
     kb = InlineKeyboardMarkup(row_width=1)
-    kb.add(InlineKeyboardButton(text=f"💳 Оплатить {amount}$", url=invoice_url))
+    kb.add(InlineKeyboardButton(text=f"💰 CryptoBot", url=invoice_url))
+    kb.add(InlineKeyboardButton(text=f"⭐ Звёзды ({int(amount)}$)", callback_data=f"pay_stars_{int(amount)}"))
     kb.add(InlineKeyboardButton(text="✅ Я ОПЛАТИЛ", callback_data=f"confirm_payment_{amount}"))
     kb.add(InlineKeyboardButton(text="⬅️ Назад", callback_data="catalog"))
     return kb
@@ -329,7 +345,7 @@ async def cmd_start(message: types.Message, state: FSMContext):
         register_user(user.id, user.username, referred_by)
         if referred_by and get_user(referred_by):
             add_ref_balance(referred_by, REFERRAL_BONUS)
-            add_balance(referred_by, REFERRAL_BALANCE_BONUS)  # +2 рубля на баланс
+            add_balance(referred_by, REFERRAL_BALANCE_BONUS)
             try:
                 await bot.send_message(referred_by,
                     f"🎉 По твоей реф-ссылке зарегистрировался новый пользователь!\n"
@@ -379,48 +395,88 @@ async def back_menu(callback: types.CallbackQuery, state: FSMContext):
 # --------- КАТАЛОГ ---------
 @dp.callback_query_handler(text="catalog")
 async def catalog(callback: types.CallbackQuery):
-    await callback.message.edit_caption(
-        caption="🗂 <b>Каталог</b>\n\nВыбери раздел:",
-        reply_markup=catalog_kb(),
-        parse_mode="HTML"
-    )
+    try:
+        await callback.message.edit_caption(
+            caption="🗂 <b>Каталог</b>\n\nВыбери раздел:",
+            reply_markup=catalog_kb(),
+            parse_mode="HTML"
+        )
+    except Exception:
+        pass
     await callback.answer()
 
 @dp.callback_query_handler(text="cat_osint")
 async def cat_osint(callback: types.CallbackQuery):
-    await callback.message.edit_caption(
-        caption="🔍 <b>Os1nt</b>\n\nВыбери тариф:",
-        reply_markup=osint_kb(),
-        parse_mode="HTML"
-    )
+    try:
+        await callback.message.edit_caption(
+            caption="🔍 <b>Os1nt</b>\n\nВыбери тариф:",
+            reply_markup=osint_kb(),
+            parse_mode="HTML"
+        )
+    except Exception:
+        pass
     await callback.answer()
 
 @dp.callback_query_handler(text="cat_sniper")
 async def cat_sniper(callback: types.CallbackQuery):
-    await callback.message.edit_caption(
-        caption="🎯 <b>SN##ER</b>\n\nВыбери тариф:",
-        reply_markup=sniper_kb(),
-        parse_mode="HTML"
-    )
+    try:
+        await callback.message.edit_caption(
+            caption="🎯 <b>SN##ER</b>\n\nВыбери тариф:",
+            reply_markup=sniper_kb(),
+            parse_mode="HTML"
+        )
+    except Exception:
+        pass
     await callback.answer()
 
 @dp.callback_query_handler(text="cat_edu")
 async def cat_edu(callback: types.CallbackQuery):
-    await callback.message.edit_caption(
-        caption="📚 <b>0БУЧЕНИЕ</b>\n\nВыбери тариф:",
-        reply_markup=edu_kb(),
-        parse_mode="HTML"
-    )
+    try:
+        await callback.message.edit_caption(
+            caption="📚 <b>0БУЧЕНИЕ</b>\n\nВыбери тариф:",
+            reply_markup=edu_kb(),
+            parse_mode="HTML"
+        )
+    except Exception:
+        pass
     await callback.answer()
 
 
 # --------- ОПЛАТА ---------
-@dp.callback_query_handler(lambda c: c.data and c.data.startswith("pay_"))
-async def handle_payment(callback: types.CallbackQuery):
+# ВАЖНО: хендлер pay_stars_ должен быть ВЫШЕ handle_payment,
+# иначе handle_payment перехватит колбэк pay_stars_X первым
+
+@dp.callback_query_handler(lambda c: c.data and c.data.startswith("pay_stars_"))
+async def pay_stars(callback: types.CallbackQuery):
+    # Формат: pay_stars_{section}_{tier}
     parts = callback.data.split("_")
-    amount = float(parts[-1])
-    section = parts[1].upper()
-    tier = parts[2].upper()
+    # Поддержка старого формата (просто число) и нового (section_tier)
+    if len(parts) == 4:
+        section = parts[2].lower()
+        tier = parts[3].lower()
+        stars_amount = STARS_PRICES.get(section, {}).get(tier, 50)
+    else:
+        # fallback: просто число
+        stars_amount = int(parts[-1])
+    prices = [types.LabeledPrice(label="Услуга", amount=stars_amount)]
+    await bot.send_invoice(
+        chat_id=callback.from_user.id,
+        title="Оплата услуги",
+        description=f"Оплата {stars_amount}⭐ через Telegram Stars",
+        payload=f"stars_{stars_amount}_{callback.from_user.id}",
+        provider_token="",
+        currency="XTR",
+        prices=prices
+    )
+    await callback.answer()
+
+
+@dp.callback_query_handler(lambda c: c.data and c.data.startswith("pay_cb_"))
+async def pay_cryptobot(callback: types.CallbackQuery):
+    parts = callback.data.split("_")
+    amount = float(parts[2])
+    section = parts[3].upper()
+    tier = parts[4].upper()
 
     label_map = {
         "BASIC": "Базовый", "MID": "Средний", "VIP": "VIP",
@@ -440,386 +496,53 @@ async def handle_payment(callback: types.CallbackQuery):
             invoice_url = result["result"]["pay_url"]
             invoice_id = result["result"]["invoice_id"]
             save_payment(callback.from_user.id, amount, "USDT", str(invoice_id))
-            await callback.message.edit_caption(
-                caption=(
-                    f"💳 <b>Оплата</b>\n\n"
-                    f"Раздел: <b>{section}</b>\n"
-                    f"Тариф: <b>{label}</b>\n"
-                    f"Сумма: <b>{amount}$</b>\n\n"
-                    f"Нажми кнопку ниже после оплаты."
-                ),
-                reply_markup=payment_confirmation_kb(invoice_url, amount, label),
-                parse_mode="HTML"
-            )
+            kb = InlineKeyboardMarkup(row_width=1)
+            kb.add(InlineKeyboardButton(text=f"💳 Оплатить {amount}$", url=invoice_url))
+            kb.add(InlineKeyboardButton(text="✅ Я ОПЛАТИЛ", callback_data=f"confirm_payment_{amount}"))
+            kb.add(InlineKeyboardButton(text="⬅️ Назад", callback_data="catalog"))
+            try:
+                await callback.message.edit_caption(
+                    caption=(
+                        f"💳 <b>Оплата</b>\n\n"
+                        f"Раздел: <b>{section}</b>\n"
+                        f"Тариф: <b>{label}</b>\n"
+                        f"Сумма: <b>{amount}$</b>\n\n"
+                        f"Нажми кнопку ниже после оплаты."
+                    ),
+                    reply_markup=kb,
+                    parse_mode="HTML"
+                )
+            except Exception:
+                pass
         else:
             raise Exception("CryptoBot error")
     except Exception:
         kb = InlineKeyboardMarkup(row_width=1)
         kb.add(InlineKeyboardButton(text="⬅️ Назад", callback_data="catalog"))
-        await callback.message.edit_caption(
-            caption=(
-                f"💳 <b>Оплата</b>\n\n"
-                f"Раздел: <b>{section}</b> | Тариф: <b>{label}</b>\n"
-                f"Сумма: <b>{amount}$</b>\n\n"
-                f"⚠️ CryptoBot API не настроен. Вставь токен в конфиг бота."
-            ),
-            reply_markup=kb,
-            parse_mode="HTML"
-        )
-
-
-# --------- ПОДТВЕРЖДЕНИЕ ОПЛАТЫ ---------
-@dp.callback_query_handler(lambda c: c.data and c.data.startswith("confirm_payment_"))
-async def confirm_payment(callback: types.CallbackQuery):
-    amount = callback.data.split("_")[-1]
-    with open(IMAGE_PATH, "rb") as photo:
-        await callback.message.answer_photo(
-            photo=photo,
-            caption=(
-                f"✅ <b>Спасибо за оплату!</b>\n\n"
-                f"Сумма: <b>{amount}$</b>\n\n"
-                f"Свяжись с @cunpar для получения доступа к услуге."
-            ),
-            reply_markup=main_menu_kb(callback.from_user.id),
-            parse_mode="HTML"
-        )
-    await callback.answer()
-
-
-# --------- ПРОФИЛЬ ---------
-@dp.callback_query_handler(text="profile")
-async def profile(callback: types.CallbackQuery):
-    user = get_user(callback.from_user.id)
-    if not user:
-        await callback.answer("Пользователь не найден.", show_alert=True)
-        return
-    user_id, username, balance, ref_balance, referred_by, reg_date, adm = user
-    text = (
-        f"👤 <b>Профиль</b>\n\n"
-        f"🆔 ID: <code>{user_id}</code>\n"
-        f"👤 Юзернейм: @{username or '—'}\n"
-        f"📅 Дата регистрации: {reg_date}\n"
-        f"💰 Баланс: <b>{balance:.2f}₽</b>\n"
-        f"🔗 Реферальный баланс: <b>{ref_balance:.2f}₽</b>\n"
-    )
-    await callback.message.edit_caption(
-        caption=text,
-        reply_markup=profile_kb(),
-        parse_mode="HTML"
-    )
-    await callback.answer()
-
-@dp.callback_query_handler(text="pay_history")
-async def pay_history(callback: types.CallbackQuery):
-    history = get_payment_history(callback.from_user.id)
-    if not history:
-        text = "📋 <b>История пополнений</b>\n\nПополнений пока нет."
-    else:
-        lines = ["📋 <b>История пополнений</b>\n"]
-        for amount, currency, status, created_at in history:
-            lines.append(f"• {created_at} — {amount} {currency} [{status}]")
-        text = "\n".join(lines)
-    kb = InlineKeyboardMarkup(row_width=1)
-    kb.add(InlineKeyboardButton(text="⬅️ Назад", callback_data="profile"))
-    await callback.message.edit_caption(
-        caption=text,
-        reply_markup=kb,
-        parse_mode="HTML"
-    )
-    await callback.answer()
-
-@dp.callback_query_handler(text="withdraw")
-async def withdraw(callback: types.CallbackQuery):
-    user = get_user(callback.from_user.id)
-    if not user:
-        await callback.answer("Пользователь не найден.", show_alert=True)
-        return
-    
-    balance = user[2]
-    if balance < 500:
-        await callback.answer(
-            f"❌ Минимальная сумма вывода: 500₽\n\nТвой баланс: {balance:.2f}₽",
-            show_alert=True
-        )
-        return
-    
-    text = (
-        f"💸 <b>Вывод денег</b>\n\n"
-        f"Твой баланс: <b>{balance:.2f}₽</b>\n\n"
-        f"Минимум для вывода: <b>500₽</b>\n\n"
-        f"Для вывода свяжись с @cunpar"
-    )
-    kb = InlineKeyboardMarkup(row_width=1)
-    kb.add(InlineKeyboardButton(text="⬅️ Назад", callback_data="profile"))
-    await callback.message.edit_caption(
-        caption=text,
-        reply_markup=kb,
-        parse_mode="HTML"
-    )
-    await callback.answer()
-
-@dp.callback_query_handler(text="topup")
-async def topup_start(callback: types.CallbackQuery, state: FSMContext):
-    kb = InlineKeyboardMarkup(row_width=1)
-    kb.add(InlineKeyboardButton(text="⬅️ Отмена", callback_data="profile"))
-    await callback.message.edit_caption(
-        caption="💰 <b>Пополнение баланса</b>\n\nВведи сумму в USDT (например: 5):",
-        reply_markup=kb,
-        parse_mode="HTML"
-    )
-    await UserStates.waiting_topup_amount.set()
-    await callback.answer()
-
-@dp.message_handler(state=UserStates.waiting_topup_amount)
-async def topup_amount(message: types.Message, state: FSMContext):
-    await state.finish()
-    try:
-        amount = float(message.text.strip())
-        if amount <= 0:
-            raise ValueError
-    except ValueError:
-        await message.answer("❌ Введи корректную сумму.")
-        return
-
-    try:
-        result = await create_invoice(amount=amount, description="Пополнение баланса")
-        if result.get("ok"):
-            invoice_url = result["result"]["pay_url"]
-            invoice_id = result["result"]["invoice_id"]
-            save_payment(message.from_user.id, amount, "USDT", str(invoice_id))
-            kb = InlineKeyboardMarkup(row_width=1)
-            kb.add(InlineKeyboardButton(text=f"💳 Оплатить {amount} USDT", url=invoice_url))
-            kb.add(InlineKeyboardButton(text="✅ Я ОПЛАТИЛ", callback_data=f"confirm_topup_{amount}"))
-            with open(IMAGE_PATH, "rb") as photo:
-                await message.answer_photo(
-                    photo=photo,
-                    caption=f"💳 Инвойс на <b>{amount} USDT</b> создан.\n\nНажми кнопку после оплаты.",
-                    reply_markup=kb,
-                    parse_mode="HTML"
-                )
-        else:
-            raise Exception()
-    except Exception:
-        await message.answer("⚠️ CryptoBot API не настроен. Вставь токен в конфиг.")
-
-@dp.callback_query_handler(lambda c: c.data and c.data.startswith("confirm_topup_"))
-async def confirm_topup(callback: types.CallbackQuery):
-    amount = callback.data.split("_")[-1]
-    with open(IMAGE_PATH, "rb") as photo:
-        await callback.message.answer_photo(
-            photo=photo,
-            caption=(
-                f"✅ <b>Спасибо за пополнение!</b>\n\n"
-                f"Сумма: <b>{amount} USDT</b>\n\n"
-                f"Свяжись с @cunpar для подтверждения пополнения."
-            ),
-            reply_markup=main_menu_kb(callback.from_user.id),
-            parse_mode="HTML"
-        )
-    await callback.answer()
-
-@dp.callback_query_handler(text="activate_promo")
-async def activate_promo_start(callback: types.CallbackQuery, state: FSMContext):
-    kb = InlineKeyboardMarkup(row_width=1)
-    kb.add(InlineKeyboardButton(text="⬅️ Отмена", callback_data="profile"))
-    await callback.message.edit_caption(
-        caption="🎟 <b>Активация промокода</b>\n\nВведи промокод:",
-        reply_markup=kb,
-        parse_mode="HTML"
-    )
-    await UserStates.waiting_promo_input.set()
-    await callback.answer()
-
-@dp.message_handler(state=UserStates.waiting_promo_input)
-async def activate_promo_input(message: types.Message, state: FSMContext):
-    await state.finish()
-    code = message.text.strip().upper()
-    amount, err = use_promo(code, message.from_user.id)
-    if err:
-        with open(IMAGE_PATH, "rb") as photo:
-            await message.answer_photo(
-                photo=photo,
-                caption=err,
-                reply_markup=main_menu_kb(message.from_user.id)
-            )
-    else:
-        with open(IMAGE_PATH, "rb") as photo:
-            await message.answer_photo(
-                photo=photo,
-                caption=f"✅ Промокод активирован! +{amount:.0f}₽ на баланс.",
-                reply_markup=main_menu_kb(message.from_user.id)
-            )
-
-
-# --------- РЕФЕРАЛЫ ---------
-@dp.callback_query_handler(text="referrals")
-async def referrals(callback: types.CallbackQuery):
-    user_id = callback.from_user.id
-    me = await bot.get_me()
-    ref_link = f"https://t.me/{me.username}?start={user_id}"
-    user = get_user(user_id)
-    ref_balance = user[3] if user else 0
-    text = (
-        f"🔗 <b>Рефералы</b>\n\n"
-        f"Твоя реферальная ссылка:\n"
-        f"<code>{ref_link}</code>\n\n"
-        f"💸 За каждого приглашённого — <b>{REFERRAL_BONUS}₽</b> на реферальный баланс\n"
-        f"💰 Бонус на основной баланс: <b>+{REFERRAL_BALANCE_BONUS}₽</b>\n"
-        f"🎁 Твой реферальный баланс: <b>{ref_balance:.2f}₽</b>"
-    )
-    kb = InlineKeyboardMarkup(row_width=1)
-    kb.add(InlineKeyboardButton(text="⬅️ Назад", callback_data="back_menu"))
-    await callback.message.edit_caption(
-        caption=text,
-        reply_markup=kb,
-        parse_mode="HTML"
-    )
-    await callback.answer()
-
-
-# --------- РАССЫЛКА (АДМИН) ---------
-@dp.callback_query_handler(text="broadcast")
-async def broadcast_start(callback: types.CallbackQuery, state: FSMContext):
-    if not is_admin(callback.from_user.id):
-        await callback.answer("❌ Нет доступа", show_alert=True)
-        return
-    kb = InlineKeyboardMarkup(row_width=1)
-    kb.add(InlineKeyboardButton(text="⬅️ Отмена", callback_data="back_menu"))
-    await callback.message.edit_caption(
-        caption="📣 <b>Рассылка</b>\n\nНапиши сообщение для рассылки:",
-        reply_markup=kb,
-        parse_mode="HTML"
-    )
-    await AdminStates.waiting_broadcast.set()
-    await callback.answer()
-
-@dp.message_handler(state=AdminStates.waiting_broadcast)
-async def do_broadcast(message: types.Message, state: FSMContext):
-    await state.finish()
-    if not is_admin(message.from_user.id):
-        return
-    users = get_all_users()
-    sent = 0
-    for uid in users:
         try:
-            with open(IMAGE_PATH, "rb") as photo:
-                await bot.send_photo(
-                    chat_id=uid,
-                    photo=photo,
-                    caption=message.text,
-                    parse_mode="HTML"
-                )
-            sent += 1
-            await asyncio.sleep(0.05)
+            await callback.message.edit_caption(
+                caption=(
+                    f"💳 <b>Оплата</b>\n\n"
+                    f"Раздел: <b>{section}</b> | Тариф: <b>{label}</b>\n"
+                    f"Сумма: <b>{amount}$</b>\n\n"
+                    f"⚠️ CryptoBot API не настроен. Вставь токен в конфиг бота."
+                ),
+                reply_markup=kb,
+                parse_mode="HTML"
+            )
         except Exception:
             pass
-    with open(IMAGE_PATH, "rb") as photo:
-        await message.answer_photo(
-            photo=photo,
-            caption=f"✅ Рассылка завершена. Отправлено: {sent}/{len(users)}",
-            reply_markup=main_menu_kb(message.from_user.id)
-        )
 
 
-# --------- ГЕНЕРАЦИЯ ПРОМО (АДМИН) ---------
-@dp.callback_query_handler(text="gen_promo")
-async def gen_promo_start(callback: types.CallbackQuery, state: FSMContext):
-    if not is_admin(callback.from_user.id):
-        await callback.answer("❌ Нет доступа", show_alert=True)
-        return
-    await callback.message.edit_caption(
-        caption="🎟 <b>Генерация промокода</b>\n\nКак создать код?",
-        reply_markup=promo_type_kb(),
-        parse_mode="HTML"
-    )
-    await callback.answer()
+@dp.callback_query_handler(lambda c: c.data and c.data.startswith("pay_") and not c.data.startswith("pay_cb_") and not c.data.startswith("pay_stars_"))
+async def handle_payment(callback: types.CallbackQuery):
+    parts = callback.data.split("_")
+    amount = float(parts[-1])
+    section = parts[1].lower()
+    tier = parts[2].lower()
 
-@dp.callback_query_handler(text="promo_manual")
-async def promo_manual(callback: types.CallbackQuery, state: FSMContext):
-    if not is_admin(callback.from_user.id):
-        return
-    await state.update_data(promo_type="manual")
-    kb = InlineKeyboardMarkup(row_width=1)
-    kb.add(InlineKeyboardButton(text="⬅️ Отмена", callback_data="back_menu"))
-    await callback.message.edit_caption(
-        caption="✍️ Введи текст промокода:",
-        reply_markup=kb,
-        parse_mode="HTML"
-    )
-    await AdminStates.waiting_promo_code.set()
-    await callback.answer()
-
-@dp.callback_query_handler(text="promo_random")
-async def promo_random(callback: types.CallbackQuery, state: FSMContext):
-    if not is_admin(callback.from_user.id):
-        return
-    code = "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
-    await state.update_data(promo_type="random", promo_code=code)
-    kb = InlineKeyboardMarkup(row_width=1)
-    kb.add(InlineKeyboardButton(text="⬅️ Отмена", callback_data="back_menu"))
-    await callback.message.edit_caption(
-        caption=f"🎲 Рандомный код: <code>{code}</code>\n\nНа сколько активаций?",
-        reply_markup=kb,
-        parse_mode="HTML"
-    )
-    await AdminStates.waiting_promo_uses.set()
-    await callback.answer()
-
-@dp.message_handler(state=AdminStates.waiting_promo_code)
-async def promo_code_input(message: types.Message, state: FSMContext):
-    code = message.text.strip().upper()
-    await state.update_data(promo_code=code)
-    await message.answer(
-        "На сколько активаций (введи число):",
-        reply_markup=ReplyKeyboardRemove()
-    )
-    await AdminStates.waiting_promo_uses.set()
-
-@dp.message_handler(state=AdminStates.waiting_promo_uses)
-async def promo_uses_input(message: types.Message, state: FSMContext):
-    try:
-        uses = int(message.text.strip())
-        if uses <= 0:
-            raise ValueError
-    except ValueError:
-        await message.answer("❌ Введи корректное число.")
-        return
-    await state.update_data(promo_uses=uses)
-    await message.answer("На сколько рублей будет промокод?")
-    await AdminStates.waiting_promo_amount.set()
-
-@dp.message_handler(state=AdminStates.waiting_promo_amount)
-async def promo_amount_input(message: types.Message, state: FSMContext):
-    try:
-        amount = float(message.text.strip())
-        if amount <= 0:
-            raise ValueError
-    except ValueError:
-        await message.answer("❌ Введи корректную сумму.")
-        return
-    data = await state.get_data()
-    code = data.get("promo_code")
-    uses = data.get("promo_uses", 1)
-    await state.finish()
-    create_promo(code, amount, uses, message.from_user.id)
-    with open(IMAGE_PATH, "rb") as photo:
-        await message.answer_photo(
-            photo=photo,
-            caption=(
-                f"✅ <b>Промокод создан!</b>\n\n"
-                f"🔑 Код: <code>{code}</code>\n"
-                f"🔄 Активаций: {uses}\n"
-                f"💰 Сумма: {amount:.0f}₽"
-            ),
-            reply_markup=main_menu_kb(message.from_user.id),
-            parse_mode="HTML"
-        )
-
-
-# ============================================================
-# ЗАПУСК
-# ============================================================
-if __name__ == "__main__":
-    init_db()
-    from aiogram import executor
-    executor.start_polling(dp, skip_updates=True)
+    label_map = {
+        "basic": "Базовый", "mid": "Средний", "vip": "VIP",
+        "strong": "Сильный"
+    }
+    label = label_map.get(ti
