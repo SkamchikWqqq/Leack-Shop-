@@ -546,3 +546,6 @@ async def handle_payment(callback: types.CallbackQuery):
         "strong": "Сильный"
     }
     label = label_map.get(ti
+import keep_alive
+
+keep_alive.run()  # Запускает Flask сервер
