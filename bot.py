@@ -10,7 +10,6 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, FSInputFile, Inli
 from aiogram.filters import CommandStart
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
-from aiogram.utils import executor
 
 # ============================================================
 # НАСТРОЙКИ
@@ -61,7 +60,6 @@ Thread(target=run_flask).start()
 # ЗАПУСК БОТА
 # ============================================================
 if __name__ == '__main__':
-    # Заменяем executor.start_polling на dp.start_polling
     dp.start_polling(skip_updates=True)
 
 # ============================================================
