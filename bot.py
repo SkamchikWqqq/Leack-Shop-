@@ -6,19 +6,16 @@ import sqlite3
 from datetime import datetime
 
 from aiogram import Bot, Dispatcher, types
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, FSInputFile, InlineKeyboardMarkup, InlineKeyboardButton
-from aiogram.filters import CommandStart
+from aiogram.types import ParseMode, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
-from aiogram.types import ParseMode
-
 from aiogram.fsm.storage.memory import MemoryStorage
 
 # ============================================================
 # НАСТРОЙКИ
 # ============================================================
-BOT_TOKEN = "8798655968:AAEGVzmu2RPbI2z6UqBeuUjZQWkTuWbzGqM"  # Заменить на свой токен
-CRYPTOBOT_API_TOKEN = "553441:AAd905Dra8Qp1GdSHuBbnWJNj8DfZYIXljf"  # Заменить на свой токен
+BOT_TOKEN = os.getenv("BOT_TOKEN", "8798655968:AAEGVzmu2RPbI2z6UqBeuUjZQWkTuWbzGqM")  # Использование переменной окружения или ваш токен по умолчанию
+CRYPTOBOT_API_TOKEN = os.getenv("CRYPTOBOT_API_TOKEN", "553441:AAd905Dra8Qp1GdSHuBbnWJNj8DfZYIXljf")  # Использование переменной окружения или ваш API ключ по умолчанию
 
 ADMIN_IDS = []
 ADMIN_USERNAMES = ["cunpar"]
@@ -39,21 +36,21 @@ storage = MemoryStorage()
 dp = Dispatcher(bot, storage=storage)
 
 # Хендлер для команды /start
-@dp.message_handler(CommandStart())
+@dp.message(commands=["start"])
 async def cmd_start(message: types.Message):
     await message.answer("Привет, я онлайн!")
 
 # ============================================================
 # НАСТРОЙКА FLASK (для UptimeRobot)
 # ============================================================
-app = Flask('')
+app = Flask(__name__)
 
 @app.route('/')
 def home():
     return "✅ Я онлайн!"  # Уведомление для UptimeRobot
 
 def run_flask():
-    port = int(os.environ.get("PORT", 8080))  # Получаем порт из переменной окружения
+    port = int(os.environ.get("PORT", 5000))  # Flask теперь работает на порту 5000
     app.run(host='0.0.0.0', port=port)  # Запускаем Flask
 
 # Запуск Flask в отдельном потоке
@@ -73,7 +70,7 @@ def start_bot_in_thread():
 if __name__ == "__main__":
     Thread(target=start_flask_in_thread).start()  # Запускаем Flask
     Thread(target=start_bot_in_thread).start()   # Запускаем Telegram-бота
-
+    
 # ============================================================
 # БД
 # ============================================================
