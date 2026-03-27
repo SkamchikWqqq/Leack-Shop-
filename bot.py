@@ -545,7 +545,7 @@ async def handle_payment(callback: types.CallbackQuery):
         "basic": "Базовый", "mid": "Средний", "vip": "VIP",
         "strong": "Сильный"
     }
-   label = label_map.get(tier, "Неизвестный")
+    label = label_map.get(tier, "Неизвестный")
 import keep_alive
 
 keep_alive.run()  # Запускает Flask сервер
