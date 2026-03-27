@@ -2,31 +2,16 @@ from aiogram.fsm.storage.memory import MemoryStorage
 import os
 from flask import Flask
 from threading import Thread
-
-app = Flask('')
-
-@app.route('/')
-def home():
-    return "✅ Я онлайн!"
-
-def run():
-    port = int(os.environ.get("PORT", 8080))  # Получаем порт из переменной окружения
-    app.run(host='0.0.0.0', port=port)  # Запускаем Flask на этом порту
-
-Thread(target=run).start()
 import asyncio
 
 import aiosqlite
-
-from aiogram import Bot, Dispatcher, types, F
-
+from aiogram import Bot, Dispatcher, types
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, FSInputFile, InlineKeyboardMarkup, InlineKeyboardButton
-
 from aiogram.filters import CommandStart
-
 from aiogram.fsm.state import State, StatesGroup
-
 from aiogram.fsm.context import FSMContext
+from aiogram.utils import executor
+
 # ============================================================
 # НАСТРОЙКИ
 # ============================================================
@@ -43,6 +28,41 @@ REFERRAL_BONUS = 2
 REFERRAL_BALANCE_BONUS = 2  # +2 рубля на основной баланс при рефере
 
 IMAGE_PATH = "paranoia_attack.png"
+
+# ============================================================
+# НАСТРОЙКА БОТА
+# ============================================================
+bot = Bot(token=BOT_TOKEN)
+storage = MemoryStorage()
+dp = Dispatcher(bot, storage=storage)
+
+# Хендлер для команды /start
+@dp.message_handler(CommandStart())
+async def cmd_start(message: types.Message):
+    await message.answer("Привет, я онлайн!")
+
+# ============================================================
+# НАСТРОЙКА FLASK
+# ============================================================
+app = Flask('')
+
+@app.route('/')
+def home():
+    return "✅ Я онлайн!"
+
+def run_flask():
+    port = int(os.environ.get("PORT", 8080))  # Получаем порт из переменной окружения
+    app.run(host='0.0.0.0', port=port)  # Запускаем Flask
+
+# Запуск Flask в отдельном потоке
+Thread(target=run_flask).start()
+
+# ============================================================
+# ЗАПУСК БОТА
+# ============================================================
+if __name__ == '__main__':
+    # Запускаем бота с помощью executor.start_polling
+    executor.start_polling(dp, skip_updates=True)
 
 # ============================================================
 # БД
