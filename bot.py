@@ -61,8 +61,8 @@ Thread(target=run_flask).start()
 # ЗАПУСК БОТА
 # ============================================================
 if __name__ == '__main__':
-    # Запускаем бота с помощью executor.start_polling
-    executor.start_polling(dp, skip_updates=True)
+    # Заменяем executor.start_polling на dp.start_polling
+    dp.start_polling(skip_updates=True)
 
 # ============================================================
 # БД
