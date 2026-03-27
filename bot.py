@@ -4,7 +4,6 @@ from flask import Flask
 from threading import Thread
 import asyncio
 
-import aiosqlite
 from aiogram import Bot, Dispatcher, types
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, FSInputFile, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.filters import CommandStart
@@ -57,10 +56,16 @@ def run_flask():
 Thread(target=run_flask).start()
 
 # ============================================================
-# ЗАПУСК БОТА
+# ЗАПУСК БОТА В РАЗНЫХ ПРОЦЕССАХ
 # ============================================================
-if __name__ == '__main__':
-    dp.start_polling(skip_updates=True)
+async def start_bot():
+    await dp.start_polling()
+
+def start_bot_in_thread():
+    asyncio.run(start_bot())
+
+# Запуск бота в отдельном потоке
+Thread(target=start_bot_in_thread).start()
 
 # ============================================================
 # БД
