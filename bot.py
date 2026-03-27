@@ -15,8 +15,8 @@ from aiogram.utils import executor
 # ============================================================
 # НАСТРОЙКИ
 # ============================================================
-BOT_TOKEN = "8798655968:AAEGVzmu2RPbI2z6UqBeuUjZQWkTuWbzGqM"
-CRYPTOBOT_API_TOKEN = "553441:AAd905Dra8Qp1GdSHuBbnWJNj8DfZYIXljf"
+BOT_TOKEN = "8798655968:AAEGVzmu2RPbI2z6UqBeuUjZQWkTuWbzGqM"  # Заменить на свой токен
+CRYPTOBOT_API_TOKEN = "553441:AAd905Dra8Qp1GdSHuBbnWJNj8DfZYIXljf"  # Заменить на свой токен
 
 ADMIN_IDS = []
 ADMIN_USERNAMES = ["cunpar"]
@@ -42,13 +42,13 @@ async def cmd_start(message: types.Message):
     await message.answer("Привет, я онлайн!")
 
 # ============================================================
-# НАСТРОЙКА FLASK
+# НАСТРОЙКА FLASK (для UptimeRobot)
 # ============================================================
 app = Flask('')
 
 @app.route('/')
 def home():
-    return "✅ Я онлайн!"
+    return "✅ Я онлайн!"  # Уведомление для UptimeRobot
 
 def run_flask():
     port = int(os.environ.get("PORT", 8080))  # Получаем порт из переменной окружения
