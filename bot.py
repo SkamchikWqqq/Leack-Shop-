@@ -3,6 +3,8 @@ import os
 from flask import Flask
 from threading import Thread
 import asyncio
+import sqlite3
+from datetime import datetime
 
 from aiogram import Bot, Dispatcher, types
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, FSInputFile, InlineKeyboardMarkup, InlineKeyboardButton
@@ -207,8 +209,7 @@ def save_payment(user_id, amount, currency, invoice_id, status="pending"):
               (user_id, amount, currency, invoice_id, status, datetime.now().strftime("%d.%m.%Y %H:%M")))
     conn.commit()
     conn.close()
-
-# ============================================================
+    # ============================================================
 # FSM STATES
 # ============================================================
 class AdminStates(StatesGroup):
@@ -411,15 +412,8 @@ async def check_sub_callback(callback: types.CallbackQuery):
         await callback.answer("❌ Ты ещё не подписался на все каналы!", show_alert=True)
         return
     await callback.message.delete()
-    await send_main_menu(callback.from_user.id, callback.message.chat.id)
-    await callback.answer()
-
-
-@dp.callback_query_handler(text="back_menu", state="*")
-async def back_menu(callback: types.CallbackQuery, state: FSMContext):
-    await state.finish()
-    await callback.message.delete()
-    await send_main_menu(callback.from_user.id, callback.message.chat.id)
+    await send_main_menu
+    (callback.from_user.id, callback.message.chat.id)
     await callback.answer()
 
 
@@ -546,37 +540,45 @@ async def pay_cryptobot(callback: types.CallbackQuery):
             except Exception:
                 pass
         else:
-            raise Exception("CryptoBot error")
-    except Exception:
-        kb = InlineKeyboardMarkup(row_width=1)
-        kb.add(InlineKeyboardButton(text="⬅️ Назад", callback_data="catalog"))
-        try:
-            await callback.message.edit_caption(
-                caption=(
-                    f"💳 <b>Оплата</b>\n\n"
-                    f"Раздел: <b>{section}</b> | Тариф: <b>{label}</b>\n"
-                    f"Сумма: <b>{amount}$</b>\n\n"
-                    f"⚠️ CryptoBot API не настроен. Вставь токен в конфиг бота."
-                ),
-                reply_markup=kb,
-                parse_mode="HTML"
-            )
-        except Exception:
-            pass
+            raise Exception("Ошибка при создании инвойса.")
+    except Exception as e:
+        await callback.answer(f"❌ Ошибка: {str(e)}", show_alert=True)
 
+@dp.callback_query_handler(lambda c: c.data and c.data.startswith("confirm_payment_"))
+async def confirm_payment(callback: types.CallbackQuery):
+    amount = float(callback.data.split("_")[-1])
+    invoice_id = callback.data.split("_")[2]
 
-@dp.callback_query_handler(lambda c: c.data and c.data.startswith("pay_") and not c.data.startswith("pay_cb_") and not c.data.startswith("pay_stars_"))
-async def handle_payment(callback: types.CallbackQuery):
-    parts = callback.data.split("_")
-    amount = float(parts[-1])
-    section = parts[1].lower()
-    tier = parts[2].lower()
+    # Проверка состояния платежа в базе данных
+    conn = sqlite3.connect("bot.db")
+    c = conn.cursor()
+    c.execute("SELECT * FROM payments WHERE invoice_id=?", (invoice_id,))
+    payment = c.fetchone()
+    conn.close()
 
-    label_map = {
-        "basic": "Базовый", "mid": "Средний", "vip": "VIP",
-        "strong": "Сильный"
-    }
-    label = label_map.get(tier, "Неизвестный")
-import keep_alive
+    if payment and payment[5] == "paid":
+        await callback.answer("✅ Платеж уже подтвержден!", show_alert=True)
+        return
 
-keep_alive.run()  # Запускает Flask сервер
+    # Обновляем статус платежа
+    save_payment(callback.from_user.id, amount, "USDT", invoice_id, status="paid")
+
+    # Уведомляем пользователя о завершении
+    await callback.answer(f"✅ Платеж {amount}$ успешно подтвержден!", show_alert=True)
+
+    # Обновляем баланс пользователя
+    add_balance(callback.from_user.id, amount)
+
+    # Отправляем сообщение о пополнении
+    await callback.message.edit_caption(
+        caption="💰 Баланс пополнен!",
+        reply_markup=main_menu_kb(callback.from_user.id),
+        parse_mode="HTML"
+    )
+
+# ============================================================
+# ЗАПУСК
+# ============================================================
+if __name__ == "__main__":
+    logging.info("Бот запущен.")
+    asyncio.run(start_bot())  # Запуск бота
