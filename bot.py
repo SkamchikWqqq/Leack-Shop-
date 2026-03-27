@@ -1,4 +1,3 @@
-from aiogram.fsm.storage.memory import MemoryStorage
 import os
 from flask import Flask
 from threading import Thread
@@ -11,6 +10,9 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, FSInputFile, Inli
 from aiogram.filters import CommandStart
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
+from aiogram.types import ParseMode
+
+from aiogram.fsm.storage.memory import MemoryStorage
 
 # ============================================================
 # НАСТРОЙКИ
@@ -32,7 +34,7 @@ IMAGE_PATH = "paranoia_attack.png"
 # ============================================================
 # НАСТРОЙКА БОТА
 # ============================================================
-bot = Bot(token=BOT_TOKEN)
+bot = Bot(token=BOT_TOKEN, parse_mode=ParseMode.HTML)
 storage = MemoryStorage()
 dp = Dispatcher(bot, storage=storage)
 
@@ -55,7 +57,8 @@ def run_flask():
     app.run(host='0.0.0.0', port=port)  # Запускаем Flask
 
 # Запуск Flask в отдельном потоке
-Thread(target=run_flask).start()
+def start_flask_in_thread():
+    Thread(target=run_flask).start()
 
 # ============================================================
 # ЗАПУСК БОТА В РАЗНЫХ ПРОЦЕССАХ
@@ -66,8 +69,10 @@ async def start_bot():
 def start_bot_in_thread():
     asyncio.run(start_bot())
 
-# Запуск бота в отдельном потоке
-Thread(target=start_bot_in_thread).start()
+# Запуск Flask и бота в отдельных потоках
+if __name__ == "__main__":
+    Thread(target=start_flask_in_thread).start()  # Запускаем Flask
+    Thread(target=start_bot_in_thread).start()   # Запускаем Telegram-бота
 
 # ============================================================
 # БД
