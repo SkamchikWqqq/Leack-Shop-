@@ -1,3 +1,6 @@
+import logging
+logging.basicConfig(level=logging.DEBUG)
+logging.debug("Starting bot...")
 import os
 from flask import Flask
 from threading import Thread
