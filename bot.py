@@ -52,7 +52,7 @@ def home():
     return "✅ Я онлайн!"  # Уведомление для UptimeRobot
 
 def run_flask():
-    port = int(os.environ.get("PORT", 5000))  # Flask теперь работает на порту 5000
+    port = int(os.environ.get("PORT", 8080))  # Flask теперь работает на порту 8080
     app.run(host='0.0.0.0', port=port)  # Запускаем Flask
 
 # Запуск Flask в отдельном потоке
