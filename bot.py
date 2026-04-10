@@ -1,26 +1,31 @@
-import logging
-
-logging.basicConfig(level=logging.DEBUG)
-
-# В коде бота
-logging.debug("Starting bot...")
 import os
 from flask import Flask
 from threading import Thread
+
+app = Flask('')
+
+@app.route('/')
+def home():
+    return "✅ Я онлайн!"
+
+def run():
+    port = int(os.environ.get("PORT", 8080))  # Получаем порт из переменной окружения
+    app.run(host='0.0.0.0', port=port)  # Запускаем Flask на этом порту
+
+Thread(target=run).start()
 import asyncio
-import sqlite3
-from datetime import datetime
 
-from aiogram import Bot, Dispatcher, types
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from aiogram import types
+import aiosqlite
 
-# Использование ParseMode:
-message = await bot.send_message(chat_id, "Текст", parse_mode=types.ParseMode.MARKDOWN)
-ParseMode = types.ParseMode
+from aiogram import Bot, Dispatcher, types, F
+
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, FSInputFile, InlineKeyboardMarkup, InlineKeyboardButton
+
+from aiogram.filters import CommandStart
+
 from aiogram.fsm.state import State, StatesGroup
+
 from aiogram.fsm.context import FSMContext
-from aiogram.fsm.storage.memory import MemoryStorage
 
 # ============================================================
 # НАСТРОЙКИ
