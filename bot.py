@@ -14,6 +14,9 @@ from datetime import datetime
 from aiogram import Bot, Dispatcher, types
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram import types
+
+# Использование ParseMode:
+message = await bot.send_message(chat_id, "Текст", parse_mode=types.ParseMode.MARKDOWN)
 ParseMode = types.ParseMode
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
