@@ -2,9 +2,13 @@
 import os
 from flask import Flask
 from threading import Thread
-from aiogram import Bot, Dispatcher
-from aiogram.enums import ParseMode
-from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram import Bot, ParseMode
+from aiogram.types import DefaultBotProperties
+
+# Инициализация бота с использованием нового способа для parse_mode
+bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+
+# Остальной код, например, обработчики команд и прочее
 
 # Создаем экземпляр Flask
 app = Flask(__name__)
