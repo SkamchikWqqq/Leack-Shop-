@@ -1,4 +1,5 @@
- import os
+
+import os
 from flask import Flask
 from threading import Thread
 from aiogram import Bot, Dispatcher
@@ -19,15 +20,7 @@ def run_flask():
     app.run(host='0.0.0.0', port=port)  # Запуск Flask на этом порту
 
 # Запуск Flask в отдельном потоке
-Thread(target=run_flask).start()
-
-# ============================================================
-# Запуск на Render
-# ============================================================
-if __name__ == "__main__":
-    # Этот блок нужен для того, чтобы сервер Flask запускался на Render
-    # Для работы с Flask и aiogram используется многозадачность
-    pass
+Thread(target=run_flask, daemon=True).start()  # Убедитесь, что поток работает в фоновом режиме
 
 # ============================================================
 # НАСТРОЙКИ
