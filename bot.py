@@ -13,6 +13,9 @@ def run():
     app.run(host='0.0.0.0', port=port)  # Запускаем Flask на этом порту
 
 Thread(target=run).start()
+
+from aiogram.types import ParseMode
+
 import asyncio
 
 import aiosqlite
