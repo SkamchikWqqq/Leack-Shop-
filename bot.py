@@ -1,7 +1,9 @@
-import os
+ import os
 from flask import Flask
 from threading import Thread
-from aiogram.enums import ParseMode  # Исправленный импорт для ParseMode
+from aiogram import Bot, Dispatcher
+from aiogram.types import ParseMode
+from aiogram.contrib.fsm_storage.memory import MemoryStorage
 
 # Создаем экземпляр Flask
 app = Flask(__name__)
