@@ -59,24 +59,6 @@ dp = Dispatcher(bot, storage=storage)
 async def cmd_start(message: types.Message):
     await message.answer("Привет, я онлайн!")
 
-# ============================================================
-# НАСТРОЙКА FLASK (для UptimeRobot)
-# ============================================================
-app = Flask(__name__)
-
-@app.route('/')
-def home():
-    return "✅ Я онлайн!"  # Уведомление для UptimeRobot
-
-def run_flask():
-    port = int(os.environ.get("PORT", 5000))  # Flask теперь работает на порту 5000
-    app.run(host='0.0.0.0', port=port)  # Запускаем Flask
-
-# Запуск Flask в отдельном потоке
-def start_flask_in_thread():
-    Thread(target=run_flask).start()
-
-# ============================================================
 # ЗАПУСК БОТА В РАЗНЫХ ПРОЦЕССАХ
 # ============================================================
 async def start_bot():
