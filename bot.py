@@ -1,18 +1,12 @@
 import os
 from flask import Flask
 from threading import Thread
-import asyncio
-import aiosqlite
-from aiogram import Bot, Dispatcher, types, F
-from aiogram.types import ParseMode, ReplyKeyboardMarkup, KeyboardButton, FSInputFile, InlineKeyboardMarkup, InlineKeyboardButton
-from aiogram.filters import CommandStart
-from aiogram.fsm.state import State, StatesGroup
-from aiogram.fsm.context import FSMContext
+from aiogram.enums import ParseMode  # Исправленный импорт для ParseMode
 
-# Создание экземпляра Flask
+# Создаем экземпляр Flask
 app = Flask(__name__)
 
-# Роут для проверки состояния сервера
+# Роут для проверки состояния сервера (чтобы UptimeRobot мог проверить)
 @app.route('/')
 def home():
     return "✅ Я онлайн!"  # Ответ для UptimeRobot
@@ -24,6 +18,14 @@ def run_flask():
 
 # Запуск Flask в отдельном потоке
 Thread(target=run_flask).start()
+
+# ============================================================
+# Запуск на Render
+# ============================================================
+if __name__ == "__main__":
+    # Этот блок нужен для того, чтобы сервер Flask запускался на Render
+    # Для работы с Flask и aiogram используется многозадачность
+    pass
 
 # ============================================================
 # НАСТРОЙКИ
