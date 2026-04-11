@@ -3,7 +3,7 @@ import os
 from flask import Flask
 from threading import Thread
 from aiogram import Bot, Dispatcher
-from aiogram.types import ParseMode
+from aiogram.enums import ParseMode
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 
 # Создаем экземпляр Flask
