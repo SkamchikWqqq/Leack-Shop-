@@ -1,12 +1,10 @@
-
-import logging
 import logging
 import os
 import asyncio
 from flask import Flask
 from threading import Thread
 from aiogram import Bot, Dispatcher, types
-from aiogram.types import ParseMode  # Оставляем только ParseMode
+from aiogram.types import ParseMode  # Только ParseMode
 from aiogram.filters import CommandStart
 
 # Устанавливаем уровень логирования на DEBUG
