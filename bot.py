@@ -1,9 +1,13 @@
-
 import os
+import asyncio
 from flask import Flask
 from threading import Thread
+from aiogram import Bot, Dispatcher, types
+from aiogram.types import DefaultBotProperties, ParseMode
+from aiogram.filters import CommandStart
 
-app = Flask('')
+# Инициализация Flask
+app = Flask(__name__)
 
 @app.route('/')
 def home():
@@ -13,22 +17,25 @@ def run():
     port = int(os.environ.get("PORT", 8080))  # Получаем порт из переменной окружения
     app.run(host='0.0.0.0', port=port)  # Запускаем Flask на этом порту
 
+# Запуск Flask в отдельном потоке
 Thread(target=run).start()
-import asyncio
 
-import aiosqlite
+# Инициализация Telegram-бота с aiogram
+BOT_TOKEN = os.getenv("BOT_TOKEN")  # Получаем токен из переменных окружения
+bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+dp = Dispatcher(bot)
 
-from aiogram import Bot, Dispatcher, types, F
+# Обработчик команды /start
+@dp.message_handler(CommandStart())
+async def cmd_start(message: types.Message):
+    await message.answer("Привет! Я бот!")
 
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, FSInputFile, InlineKeyboardMarkup, InlineKeyboardButton
+# Запуск бота
+async def start_bot():
+    await dp.start_polling()
 
-from aiogram.filters import CommandStart
-
-from aiogram.fsm.state import State, StatesGroup
-
-from aiogram.fsm.context import FSMContext
-
-
+# Асинхронный запуск бота
+asyncio.run(start_bot())
 
 # ============================================================
 # НАСТРОЙКИ
