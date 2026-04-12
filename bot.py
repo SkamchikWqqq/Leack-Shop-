@@ -2,30 +2,33 @@
 import os
 from flask import Flask
 from threading import Thread
-from aiogram import Bot
-from aiogram.types import ParseMode
-from aiogram.types import DefaultBotProperties
 
-# Инициализация бота с использованием нового способа для parse_mode
-bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+app = Flask('')
 
-# Остальной код, например, обработчики команд и прочее
-
-# Создаем экземпляр Flask
-app = Flask(__name__)
-
-# Роут для проверки состояния сервера (чтобы UptimeRobot мог проверить)
 @app.route('/')
 def home():
-    return "✅ Я онлайн!"  # Ответ для UptimeRobot
+    return "✅ Я онлайн!"
 
-# Функция для запуска Flask на порту
-def run_flask():
+def run():
     port = int(os.environ.get("PORT", 8080))  # Получаем порт из переменной окружения
-    app.run(host='0.0.0.0', port=port)  # Запуск Flask на этом порту
+    app.run(host='0.0.0.0', port=port)  # Запускаем Flask на этом порту
 
-# Запуск Flask в отдельном потоке
-Thread(target=run_flask, daemon=True).start()  # Убедитесь, что поток работает в фоновом режиме
+Thread(target=run).start()
+import asyncio
+
+import aiosqlite
+
+from aiogram import Bot, Dispatcher, types, F
+
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, FSInputFile, InlineKeyboardMarkup, InlineKeyboardButton
+
+from aiogram.filters import CommandStart
+
+from aiogram.fsm.state import State, StatesGroup
+
+from aiogram.fsm.context import FSMContext
+
+
 
 # ============================================================
 # НАСТРОЙКИ
