@@ -5,6 +5,7 @@ from threading import Thread
 from aiogram import Bot, Dispatcher, types
 from aiogram.types import DefaultBotProperties, ParseMode
 from aiogram.filters import CommandStart
+from aiogram.fsm.storage.memory import MemoryStorage
 
 # Инициализация Flask
 app = Flask(__name__)
@@ -23,7 +24,7 @@ Thread(target=run).start()
 # Инициализация Telegram-бота с aiogram
 BOT_TOKEN = os.getenv("BOT_TOKEN")  # Получаем токен из переменных окружения
 bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
-dp = Dispatcher(bot)
+dp = Dispatcher(bot, storage=MemoryStorage())
 
 # Обработчик команды /start
 @dp.message_handler(CommandStart())
