@@ -3,7 +3,7 @@ import asyncio
 from flask import Flask
 from threading import Thread
 from aiogram import Bot, Dispatcher, types
-from aiogram.types import DefaultBotProperties, ParseMode
+from aiogram.types import ParseMode
 from aiogram.filters import CommandStart
 from aiogram.fsm.storage.memory import MemoryStorage
 
@@ -12,7 +12,7 @@ app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "✅ Я онлайн!"
+    return "✅ Я онлайн!"  # Сообщение, которое будет отображаться на главной странице
 
 def run():
     port = int(os.environ.get("PORT", 8080))  # Получаем порт из переменной окружения
@@ -23,20 +23,20 @@ Thread(target=run).start()
 
 # Инициализация Telegram-бота с aiogram
 BOT_TOKEN = os.getenv("BOT_TOKEN")  # Получаем токен из переменных окружения
-bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
-dp = Dispatcher(bot, storage=MemoryStorage())
+bot = Bot(token=BOT_TOKEN, parse_mode=ParseMode.HTML)  # Инициализация бота с parse_mode
+dp = Dispatcher(bot, storage=MemoryStorage())  # Диспетчер для бота с использованием памяти
 
 # Обработчик команды /start
 @dp.message_handler(CommandStart())
 async def cmd_start(message: types.Message):
-    await message.answer("Привет! Я бот!")
+    await message.answer("Привет! Я бот!")  # Ответ на команду /start
 
 # Запуск бота
 async def start_bot():
-    await dp.start_polling()
+    await dp.start_polling()  # Старт polling для бота
 
 # Асинхронный запуск бота
-asyncio.run(start_bot())
+asyncio.run(start_bot())  # Запуск бота асинхронно
 
 # ============================================================
 # НАСТРОЙКИ
