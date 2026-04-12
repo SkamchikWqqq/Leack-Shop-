@@ -1,11 +1,12 @@
 
 import logging
+import logging
 import os
 import asyncio
 from flask import Flask
 from threading import Thread
 from aiogram import Bot, Dispatcher, types
-from aiogram.types import DefaultBotProperties, ParseMode
+from aiogram.types import ParseMode  # Оставляем только ParseMode
 from aiogram.filters import CommandStart
 
 # Устанавливаем уровень логирования на DEBUG
@@ -34,7 +35,7 @@ logging.info("Инициализация Telegram-бота...")
 
 # Инициализация Telegram-бота с aiogram
 BOT_TOKEN = os.getenv("BOT_TOKEN")  # Получаем токен из переменных окружения
-bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+bot = Bot(token=BOT_TOKEN, parse_mode=ParseMode.HTML)  # Исправлено: Убираем DefaultBotProperties
 dp = Dispatcher(bot)
 
 # Обработчик команды /start
