@@ -2,7 +2,8 @@
 import os
 from flask import Flask
 from threading import Thread
-from aiogram import Bot, ParseMode
+from aiogram import Bot
+from aiogram.types import ParseMode
 from aiogram.types import DefaultBotProperties
 
 # Инициализация бота с использованием нового способа для parse_mode
