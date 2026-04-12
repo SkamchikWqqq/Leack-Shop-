@@ -14,12 +14,9 @@ app = Flask(__name__)
 def home():
     return "✅ Я онлайн!"  # Сообщение, которое будет отображаться на главной странице
 
-def run():
+def run_flask():
     port = int(os.environ.get("PORT", 8080))  # Получаем порт из переменной окружения
     app.run(host='0.0.0.0', port=port)  # Запускаем Flask на этом порту
-
-# Запуск Flask в отдельном потоке
-Thread(target=run).start()
 
 # Инициализация Telegram-бота с aiogram
 BOT_TOKEN = os.getenv("BOT_TOKEN")  # Получаем токен из переменных окружения
@@ -35,8 +32,13 @@ async def cmd_start(message: types.Message):
 async def start_bot():
     await dp.start_polling()  # Старт polling для бота
 
-# Асинхронный запуск бота
-asyncio.run(start_bot())  # Запуск бота асинхронно
+def run_bot():
+    asyncio.run(start_bot())  # Запуск бота асинхронно
+
+# Запуск Flask и бота в отдельных потоках
+if __name__ == "__main__":
+    Thread(target=run_flask).start()  # Запускаем Flask
+    Thread(target=run_bot).start()   # Запускаем Telegram-бота
 
 # ============================================================
 # НАСТРОЙКИ
