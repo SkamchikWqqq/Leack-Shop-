@@ -78,7 +78,7 @@ def start_bot_in_thread():
 
 # Запуск Flask и бота в отдельных потоках
 if __name__ == "__main__":
-    Thread(target=start_flask_in_thread).start()  # Запускаем Flask
+    Thread(target=run_flask, daemon=True).start()
     Thread(target=start_bot_in_thread).start()   # Запускаем Telegram-бота
     
 # ============================================================
