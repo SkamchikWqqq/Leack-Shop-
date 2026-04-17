@@ -57,7 +57,11 @@ bot = Bot(
     token=BOT_TOKEN, 
     default=DefaultBotProperties(parse_mode=ParseMode.HTML)
 )
-dp = Dispatcher(bot, storage=storage)
+# Создаем хранилище в памяти
+storage = MemoryStorage()
+
+# Правильная инициализация диспетчера для aiogram 3.x
+dp = Dispatcher(storage=storage)
 
 # Хендлер для команды /start
 @dp.message(commands=["start"])
