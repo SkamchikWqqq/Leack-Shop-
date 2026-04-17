@@ -3,49 +3,61 @@ import os
 import asyncio
 from flask import Flask
 from threading import Thread
-from aiogram import Bot, Dispatcher
+from aiogram import Bot, Dispatcher, types
+from aiogram.filters import CommandStart
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 
-# Настройка логов
+# Настройка логирования
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# --- WEB SERVER FOR RENDER ---
 app = Flask(__name__)
 
 @app.route('/')
 def index():
-    return "STATUS: WORKING", 200
+    return "Бот в сети!", 200
 
 def run_flask():
     port = int(os.environ.get("PORT", 8080))
     app.run(host='0.0.0.0', port=port)
 
-# --- BOT LOGIC ---
+# --- ГЛАВНАЯ ФУНКЦИЯ ---
 async def main():
-    # Пробуем достать токен
     token = os.getenv("BOT_TOKEN")
     
+    # 1. Проверка токена
     if not token:
-        logger.error("!!! TOKEN NOT FOUND IN ENV !!!")
-        # Вместо вылета, дадим Flask поработать, чтобы ты видел страницу
-        Thread(target=run_flask).start()
-        while True: await asyncio.sleep(3600)
+        logger.error("ТОКЕН НЕ НАЙДЕН!")
+        return
 
-    # Инициализация строго по новым правилам aiogram 3.7+
-    bot = Bot(
-        token=token, 
-        default=DefaultBotProperties(parse_mode=ParseMode.HTML)
-    )
+    # 2. Инициализация (AIOGRAM 3.x)
+    bot = Bot(token=token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     dp = Dispatcher()
 
-    # Фоновый запуск Flask
+    # --- ТЕСТОВЫЙ ХЕНДЛЕР (ПРОЦЕДУРА ПРОВЕРКИ) ---
+    @dp.message(CommandStart())
+    async def test_start(message: types.Message):
+        logger.info(f"Команда /start получена от {message.from_user.id}")
+        await message.answer("✅ СИСТЕМА РАБОТАЕТ! Если ты видишь это, значит база настроена верно.")
+
+    # Эхо-хендлер для проверки любого сообщения
+    @dp.message()
+    async def echo_all(message: types.Message):
+        logger.info(f"Получено сообщение: {message.text}")
+        await message.answer(f"Ты написал: {message.text}. Я тебя слышу!")
+
+    # 3. Запуск Flask
     Thread(target=run_flask, daemon=True).start()
 
-    logger.info("Starting polling...")
+    # 4. Запуск Polling
+    logger.info("Запуск опроса серверов Telegram...")
     await bot.delete_webhook(drop_pending_updates=True)
-    await dp.start_polling(bot)
+    
+    try:
+        await dp.start_polling(bot)
+    except Exception as e:
+        logger.error(f"Ошибка при работе бота: {e}")
 
 if __name__ == "__main__":
     asyncio.run(main())
