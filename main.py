@@ -64,7 +64,7 @@ storage = MemoryStorage()
 dp = Dispatcher(storage=storage)
 
 # Хендлер для команды /start
-@dp.message(commands=["start"])
+@dp.message(CommandStart())
 async def cmd_start(message: types.Message):
     await message.answer("Привет, я онлайн!")
 
