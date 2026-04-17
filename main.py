@@ -642,27 +642,20 @@ async def main():
     # 1. Инициализация базы данных
     try:
         init_db()
-        logger.info("База данных готова.")
     except Exception as e:
         logger.error(f"Ошибка БД: {e}")
 
-    # 2. Запуск Flask для Render (ОБЯЗАТЕЛЬНО)
-    # Это предотвращает ошибку "No open ports detected"
-    server_thread = Thread(target=run_flask, daemon=True)
-    server_thread.start()
-    logger.info("Веб-сервер Flask запущен.")
-
-    # 3. Очистка очереди обновлений и запуск Polling
-    logger.info("Удаление вебхука и запуск бота...")
+    # 2. Запуск Flask (исправленное название функции)
+    Thread(target=run_flask, daemon=True).start() 
+    
+    logger.info("Удаление вебхука и запуск опроса...")
     await bot.delete_webhook(drop_pending_updates=True)
     
-    # Запуск бота
+    # 3. Запуск бота
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
     try:
         asyncio.run(main())
     except (KeyboardInterrupt, SystemExit):
-        logger.info("Бот остановлен пользователем")
-    except Exception as e:
-        logger.critical(f"Критическая ошибка при запуске: {e}")
+        logger.info("Бот остановлен")
