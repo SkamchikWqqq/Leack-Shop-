@@ -53,8 +53,10 @@ dp = Dispatcher(storage=MemoryStorage())
 # ============================================================
 # НАСТРОЙКА БОТА
 # ============================================================
-bot = Bot(token=BOT_TOKEN, parse_mode=ParseMode.HTML)
-storage = MemoryStorage()
+bot = Bot(
+    token=BOT_TOKEN, 
+    default=DefaultBotProperties(parse_mode=ParseMode.HTML)
+)
 dp = Dispatcher(bot, storage=storage)
 
 # Хендлер для команды /start
