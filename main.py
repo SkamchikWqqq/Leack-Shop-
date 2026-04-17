@@ -614,6 +614,24 @@ async def confirm_payment(callback: types.CallbackQuery):
 # ============================================================
 # ЗАПУСК
 # ============================================================
+async def main():
+    # Инициализация базы данных (функция должна быть у тебя в коде)
+    try:
+        init_db()
+    except NameError:
+        logger.warning("Функция init_db не найдена, пропуск...")
+
+    # Запуск Flask в отдельном потоке
+    Thread(target=run_flask, daemon=True).start()
+    
+    logger.info("Удаление вебхука и запуск опроса...")
+    await bot.delete_webhook(drop_pending_updates=True)
+    
+    # Запуск бота
+    await dp.start_polling(bot)
+
 if __name__ == "__main__":
-    logging.info("Бот запущен.")
-    asyncio.run(start_bot())  # Запуск бота
+    try:
+        asyncio.run(main())
+    except (KeyboardInterrupt, SystemExit):
+        logger.info("Бот остановлен")
