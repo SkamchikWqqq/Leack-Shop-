@@ -1,59 +1,52 @@
-import logging
 import os
 import asyncio
+import logging
 from flask import Flask
 from threading import Thread
-from aiogram import Bot, Dispatcher, types
-from aiogram.filters import CommandStart
-from aiogram.client.default import DefaultBotProperties
+from aiogram import Bot, Dispatcher
 from aiogram.enums import ParseMode
+from aiogram.client.default import DefaultBotProperties
 
-# Настройка логов
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
-# --- БЛОК FLASK (для Render) ---
+# 1. Flask для Render
 app = Flask(__name__)
 
-@app.route('/')
-def home():
-    return "✅ Bot is Online!"
+@app.route('/health')
+def health():
+    return "OK", 200
 
-def run_flask():
-    # Render выдает порт динамически, важно брать его из окружения
+@app.route('/')
+def index():
+    return "Bot is running"
+
+def run_web():
     port = int(os.environ.get("PORT", 8080))
     app.run(host='0.0.0.0', port=port)
 
-# --- БЛОК BOT (aiogram 3.x) ---
-TOKEN = os.getenv("BOT_TOKEN")
-
-# В aiogram 3.x настройки текста задаются через DefaultBotProperties
-bot = Bot(
-    token=TOKEN, 
-    default=DefaultBotProperties(parse_mode=ParseMode.HTML)
-)
-dp = Dispatcher()
-
-@dp.message(CommandStart())
-async def cmd_start(message: types.Message):
-    await message.answer("Привет! Я бот, запущенный на Render!")
-
+# 2. Бот
 async def main():
-    # 1. Запускаем Flask в отдельном потоке
-    logger.info("Starting Flask thread...")
-    flask_thread = Thread(target=run_flask)
-    flask_thread.daemon = True  # Чтобы поток закрылся при остановке основного кода
-    flask_thread.start()
+    token = os.getenv("BOT_TOKEN")
+    if not token:
+        logging.error("BOT_TOKEN not found in environment!")
+        return
 
-    # 2. Запускаем бота
-    logger.info("Starting Telegram Bot (Polling)...")
-    try:
-        await dp.start_polling(bot)
-    finally:
-        await bot.session.close()
+    bot = Bot(token=token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+    dp = Dispatcher()
+
+    # Запускаем Flask в потоке
+    thread = Thread(target=run_web)
+    thread.daemon = True
+    thread.start()
+
+    logging.info("Starting bot...")
+    await dp.start_polling(bot)
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except Exception as e:
+        logging.critical(f"FATAL ERROR: {e}", exc_info=True)
 
 # ============================================================
 # НАСТРОЙКИ
