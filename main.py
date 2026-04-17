@@ -3,58 +3,52 @@ import os
 import asyncio
 from flask import Flask
 from threading import Thread
-from aiogram import Bot, Dispatcher, types
-from aiogram.filters import CommandStart
+from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 
-# Настройка логирования
+# Настройка логов
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# --- FLASK ДЛЯ RENDER ---
+# --- WEB SERVER FOR RENDER ---
 app = Flask(__name__)
 
 @app.route('/')
-def home():
-    return "✅ Бот активен", 200
+def index():
+    return "STATUS: WORKING", 200
 
 def run_flask():
-    # Render сам назначит порт, важно его прочитать
     port = int(os.environ.get("PORT", 8080))
     app.run(host='0.0.0.0', port=port)
 
-# --- ОСНОВНОЙ БОТ ---
-async def start_bot():
-    token = os.getenv("8798655968:AAEGVzmu2RPbI2z6UqBeuUjZQWkTuWbzGqM")
+# --- BOT LOGIC ---
+async def main():
+    # Пробуем достать токен
+    token = os.getenv("BOT_TOKEN")
     
     if not token:
-        logger.error("КРИТИЧЕСКАЯ ОШИБКА: Переменная BOT_TOKEN не установлена в Render!")
-        return
+        logger.error("!!! TOKEN NOT FOUND IN ENV !!!")
+        # Вместо вылета, дадим Flask поработать, чтобы ты видел страницу
+        Thread(target=run_flask).start()
+        while True: await asyncio.sleep(3600)
 
-    # ИСПРАВЛЕНО: Новый формат инициализации для aiogram 3.x
+    # Инициализация строго по новым правилам aiogram 3.7+
     bot = Bot(
         token=token, 
         default=DefaultBotProperties(parse_mode=ParseMode.HTML)
     )
     dp = Dispatcher()
 
-    @dp.message(CommandStart())
-    async def cmd_start(message: types.Message):
-        await message.answer("Бот запущен и готов к работе на Render!")
-
-    # Запускаем веб-сервер в фоне
+    # Фоновый запуск Flask
     Thread(target=run_flask, daemon=True).start()
 
-    logger.info("Бот запущен...")
+    logger.info("Starting polling...")
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
-    try:
-        asyncio.run(start_bot())
-    except Exception as e:
-        logger.error(f"Ошибка: {e}")
+    asyncio.run(main())
 
 # ============================================================
 # НАСТРОЙКИ
