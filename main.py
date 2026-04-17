@@ -4,50 +4,56 @@ import asyncio
 from flask import Flask
 from threading import Thread
 from aiogram import Bot, Dispatcher, types
-from aiogram.types import ParseMode  # Только ParseMode
 from aiogram.filters import CommandStart
+from aiogram.client.default import DefaultBotProperties
+from aiogram.enums import ParseMode
 
-# Устанавливаем уровень логирования на DEBUG
-logging.basicConfig(level=logging.DEBUG)
+# Настройка логов
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-# Логирование старта бота
-logging.info("Инициализация приложения...")
-
-# Инициализация Flask
+# --- БЛОК FLASK (для Render) ---
 app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "✅ Я онлайн!"
+    return "✅ Bot is Online!"
 
-def run():
-    port = int(os.environ.get("PORT", 8080))  # Получаем порт из переменной окружения
-    logging.debug(f"Запуск Flask на порту {port}")
-    app.run(host='0.0.0.0', port=port)  # Запускаем Flask на этом порту
+def run_flask():
+    # Render выдает порт динамически, важно брать его из окружения
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host='0.0.0.0', port=port)
 
-# Запуск Flask в отдельном потоке
-Thread(target=run).start()
+# --- БЛОК BOT (aiogram 3.x) ---
+TOKEN = os.getenv("BOT_TOKEN")
 
-# Логирование старта бота
-logging.info("Инициализация Telegram-бота...")
+# В aiogram 3.x настройки текста задаются через DefaultBotProperties
+bot = Bot(
+    token=TOKEN, 
+    default=DefaultBotProperties(parse_mode=ParseMode.HTML)
+)
+dp = Dispatcher()
 
-# Инициализация Telegram-бота с aiogram
-BOT_TOKEN = os.getenv("BOT_TOKEN")  # Получаем токен из переменных окружения
-bot = Bot(token=BOT_TOKEN, parse_mode=ParseMode.HTML)  # Исправлено: Убираем DefaultBotProperties
-dp = Dispatcher(bot)
-
-# Обработчик команды /start
-@dp.message_handler(CommandStart())
+@dp.message(CommandStart())
 async def cmd_start(message: types.Message):
-    await message.answer("Привет! Я бот!")
+    await message.answer("Привет! Я бот, запущенный на Render!")
 
-# Запуск бота
-async def start_bot():
-    logging.debug("Запуск бота на основе aiogram...")
-    await dp.start_polling()
+async def main():
+    # 1. Запускаем Flask в отдельном потоке
+    logger.info("Starting Flask thread...")
+    flask_thread = Thread(target=run_flask)
+    flask_thread.daemon = True  # Чтобы поток закрылся при остановке основного кода
+    flask_thread.start()
 
-# Асинхронный запуск бота
-asyncio.run(start_bot())
+    # 2. Запускаем бота
+    logger.info("Starting Telegram Bot (Polling)...")
+    try:
+        await dp.start_polling(bot)
+    finally:
+        await bot.session.close()
+
+if __name__ == "__main__":
+    asyncio.run(main())
 
 # ============================================================
 # НАСТРОЙКИ
