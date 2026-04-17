@@ -554,7 +554,7 @@ async def pay_stars(callback: types.CallbackQuery):
     await callback.answer()
 
 
-@dp.callback_query_handler(lambda c: c.data and c.data.startswith("pay_cb_"))
+@dp.callback_query(F.data.startswith("pay_cb_"))
 async def pay_cryptobot(callback: types.CallbackQuery):
     parts = callback.data.split("_")
     amount = float(parts[2])
