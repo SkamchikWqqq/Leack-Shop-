@@ -512,7 +512,7 @@ async def cat_sniper(callback: types.CallbackQuery):
         pass
     await callback.answer()
 
-@dp.callback_query_handler(text="cat_edu")
+@dp.callback_query(F.data == "cat_edu")
 async def cat_edu(callback: types.CallbackQuery):
     try:
         await callback.message.edit_caption(
