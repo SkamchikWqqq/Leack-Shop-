@@ -351,18 +351,18 @@ logging.basicConfig(level=logging.INFO)
 # ХЭНДЛЕРЫ
 # ============================================================
 async def send_main_menu(user_id: int, chat_id: int):
-    with open(IMAGE_PATH, "rb") as photo:
-        await bot.send_photo(
-            chat_id=chat_id,
-            photo=photo,
-            caption="🏠 <b>Главное меню</b>\n\nВыбери раздел:",
-            reply_markup=main_menu_kb(user_id),
-            parse_mode="HTML"
-        )
+    # В 3.х для отправки локальных файлов лучше использовать FSInputFile
+    photo = FSInputFile(IMAGE_PATH)
+    await bot.send_photo(
+        chat_id=chat_id,
+        photo=photo,
+        caption="🏠 <b>Главное меню</b>\n\nВыбери раздел:",
+        reply_markup=main_menu_kb(user_id)
+    )
 
-
-@dp.message_handler(commands=["start"])
-async def cmd_start(message: types.Message, state: FSMContext):
+# Заменили @dp.message_handler на @dp.message(CommandStart())
+@dp.message(CommandStart())
+async def cmd_start(message: types.Message):
     user = message.from_user
     args = message.text.split()
     referred_by = None
@@ -378,6 +378,7 @@ async def cmd_start(message: types.Message, state: FSMContext):
     if not existing:
         register_user(user.id, user.username, referred_by)
         if referred_by and get_user(referred_by):
+            # Эти функции (add_ref_balance и др.) должны быть объявлены выше в твоем коде
             add_ref_balance(referred_by, REFERRAL_BONUS)
             add_balance(referred_by, REFERRAL_BALANCE_BONUS)
             try:
@@ -391,32 +392,78 @@ async def cmd_start(message: types.Message, state: FSMContext):
     if user.username and user.username.lower() in ADMIN_USERNAMES:
         set_admin(user.id)
 
-    subscribed = await check_subscription(bot, user.id)
+    # В 3.х передаем объект бота явно, если функция check_subscription это требует
+    subscribed = await check_subscription(user.id) 
     if not subscribed:
-        with open(IMAGE_PATH, "rb") as photo:
-            await message.answer_photo(
-                photo=photo,
-                caption=(
-                    "👋 Добро пожаловать!\n\n"
-                    "❗️ Для доступа к боту необходимо подписаться на наш канал."
-                ),
-                reply_markup=sub_check_kb()
-            )
+        photo = FSInputFile(IMAGE_PATH)
+        await message.answer_photo(
+            photo=photo,
+            caption=(
+                "👋 Добро пожаловать!\n\n"
+                "❗️ Для доступа к боту необходимо подписаться на наш канал."
+            ),
+            reply_markup=sub_check_kb()
+        )
         return
 
     await send_main_menu(message.from_user.id, message.chat.id)
 
-
-@dp.callback_query_handler(text="check_sub")
+# Заменили @dp.callback_query_handler(text=...) на @dp.callback_query(F.data == ...)
+@dp.callback_query(F.data == "check_sub")
 async def check_sub_callback(callback: types.CallbackQuery):
-    subscribed = await check_subscription(bot, callback.from_user.id)
+    subscribed = await check_subscription(callback.from_user.id)
     if not subscribed:
         await callback.answer("❌ Ты ещё не подписался на все каналы!", show_alert=True)
         return
     await callback.message.delete()
-    await send_main_menu
-    (callback.from_user.id, callback.message.chat.id)
+    await send_main_menu(callback.from_user.id, callback.message.chat.id)
     await callback.answer()
+
+# --------- КАТАЛОГ ---------
+@dp.callback_query(F.data == "catalog")
+async def catalog(callback: types.CallbackQuery):
+    try:
+        await callback.message.edit_caption(
+            caption="🗂 <b>Каталог</b>\n\nВыбери раздел:",
+            reply_markup=catalog_kb()
+        )
+    except Exception:
+        pass
+    await callback.answer()
+
+@dp.callback_query(F.data == "cat_osint")
+async def cat_osint(callback: types.CallbackQuery):
+    try:
+        await callback.message.edit_caption(
+            caption="🔍 <b>Os1nt</b>\n\nВыбери тариф:",
+            reply_markup=osint_kb()
+        )
+    except Exception:
+        pass
+    await callback.answer()
+
+@dp.callback_query(F.data == "cat_sniper")
+async def cat_sniper(callback: types.CallbackQuery):
+    try:
+        await callback.message.edit_caption(
+            caption="🎯 <b>SN##ER</b>\n\nВыбери тариф:",
+            reply_markup=sniper_kb()
+        )
+    except Exception:
+        pass
+    await callback.answer()
+
+@dp.callback_query(F.data == "cat_edu")
+async def cat_edu(callback: types.CallbackQuery):
+    try:
+        await callback.message.edit_caption(
+            caption="📚 <b>0БУЧЕНИЕ</b>\n\nВыбери тариф:",
+            reply_markup=edu_kb()
+        )
+    except Exception:
+        pass
+    await callback.answer()
+
 
 
 # --------- КАТАЛОГ ---------
