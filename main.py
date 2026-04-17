@@ -500,7 +500,7 @@ async def cat_osint(callback: types.CallbackQuery):
         pass
     await callback.answer()
 
-@dp.callback_query_handler(text="cat_sniper")
+@dp.callback_query(F.data == "cat_sniper")
 async def cat_sniper(callback: types.CallbackQuery):
     try:
         await callback.message.edit_caption(
