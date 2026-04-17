@@ -402,7 +402,7 @@ async def cmd_start(message: types.Message):
         set_admin(user.id)
 
     # В 3.х передаем объект бота явно, если функция check_subscription это требует
-    subscribed = await check_subscription(user.id) 
+    subscribed = await check_subscription(bot, user.id) 
     if not subscribed:
         photo = FSInputFile(IMAGE_PATH)
         await message.answer_photo(
