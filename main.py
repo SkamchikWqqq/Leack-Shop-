@@ -488,7 +488,7 @@ async def catalog(callback: types.CallbackQuery):
         pass
     await callback.answer()
 
-@dp.callback_query_handler(text="cat_osint")
+@dp.callback_query(F.data == "cat_osint")
 async def cat_osint(callback: types.CallbackQuery):
     try:
         await callback.message.edit_caption(
