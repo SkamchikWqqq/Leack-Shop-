@@ -7,6 +7,7 @@ from datetime import datetime
 from flask import Flask
 from threading import Thread
 
+from aiogram.fsm.state import State, StatesGroup
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import CommandStart
 from aiogram.client.default import DefaultBotProperties
