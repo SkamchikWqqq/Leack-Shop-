@@ -13,13 +13,14 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.fsm.context import FSMContext
 from aiogram.types import InlineKeyboardButton, FSInputFile, InlineKeyboardMarkup
 
-# Настройка логирования
+# 1. НАСТРОЙКА ЛОГИРОВАНИЯ
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Flask сервер для Render (чтобы статус был "Live")
+# 2. ВЕБ-СЕРВЕР ДЛЯ RENDER (ЧТОБЫ БОТ НЕ ВЫЛЕТАЛ)
 app = Flask(__name__)
 
 @app.route('/')
@@ -30,7 +31,7 @@ def run_flask():
     port = int(os.environ.get("PORT", 8080))
     app.run(host='0.0.0.0', port=port)
 
-# --- ТВОИ НАСТРОЙКИ ---
+# 3. ТВОИ НАСТРОЙКИ (КОНСТАНТЫ)
 BOT_TOKEN = os.getenv("BOT_TOKEN", "8798655968:AAEGVzmu2RPbI2z6UqBeuUjZQWkTuWbzGqM")
 CRYPTOBOT_API_TOKEN = os.getenv("CRYPTOBOT_API_TOKEN", "553441:AAd905Dra8Qp1GdSHuBbnWJNj8DfZYIXljf")
 
@@ -42,8 +43,11 @@ REFERRAL_BONUS = 2
 REFERRAL_BALANCE_BONUS = 2
 IMAGE_PATH = "paranoia_attack.png"
 
-# Инициализация объектов для aiogram 3.x
-bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+# 4. ИНИЦИАЛИЗАЦИЯ ОБЪЕКТОВ (ИСПРАВЛЕНО ДЛЯ AIOGRAM 3.x)
+bot = Bot(
+    token=BOT_TOKEN, 
+    default=DefaultBotProperties(parse_mode=ParseMode.HTML)
+)
 dp = Dispatcher(storage=MemoryStorage())
 
 # ============================================================
