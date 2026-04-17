@@ -602,7 +602,7 @@ async def pay_cryptobot(callback: types.CallbackQuery):
     except Exception as e:
         await callback.answer(f"❌ Ошибка: {str(e)}", show_alert=True)
 
-@dp.callback_query_handler(lambda c: c.data and c.data.startswith("confirm_payment_"))
+@dp.callback_query(F.data.startswith("confirm_payment_"))
 async def confirm_payment(callback: types.CallbackQuery):
     amount = float(callback.data.split("_")[-1])
     invoice_id = callback.data.split("_")[2]
