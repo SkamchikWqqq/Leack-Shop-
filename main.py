@@ -8,69 +8,53 @@ from aiogram.filters import CommandStart
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 
-# Настройка логов, чтобы видеть всё в консоли Render
+# Настройка логирования
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# --- СЕКЦИЯ FLASK (ДЛЯ RENDER) ---
+# --- FLASK ДЛЯ RENDER ---
 app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "✅ Bot is Online!", 200
-
-@app.route('/health')
-def health():
-    return "OK", 200
+    return "✅ Бот активен", 200
 
 def run_flask():
-    # Render выдает динамический порт, его ОБЯЗАТЕЛЬНО нужно брать из PORT
+    # Render сам назначит порт, важно его прочитать
     port = int(os.environ.get("PORT", 8080))
-    logger.info(f"Запуск Flask на порту {port}")
     app.run(host='0.0.0.0', port=port)
 
-# --- СЕКЦИЯ BOT (AIOGRAM 3.X) ---
-
+# --- ОСНОВНОЙ БОТ ---
 async def start_bot():
-    token = os.getenv("BOT_TOKEN")
+    token = os.getenv("8798655968:AAEGVzmu2RPbI2z6UqBeuUjZQWkTuWbzGqM")
     
     if not token:
-        logger.error("КРИТИЧЕСКАЯ ОШИБКА: Переменная BOT_TOKEN не установлена в настройках Render!")
+        logger.error("КРИТИЧЕСКАЯ ОШИБКА: Переменная BOT_TOKEN не установлена в Render!")
         return
 
-    # Правильная инициализация для aiogram 3.7.0+
+    # ИСПРАВЛЕНО: Новый формат инициализации для aiogram 3.x
     bot = Bot(
         token=token, 
         default=DefaultBotProperties(parse_mode=ParseMode.HTML)
     )
     dp = Dispatcher()
 
-    # Хендлер на команду /start (новый синтаксис)
     @dp.message(CommandStart())
     async def cmd_start(message: types.Message):
-        await message.answer(f"Привет, {message.from_user.full_name}! Бот работает на Render.")
+        await message.answer("Бот запущен и готов к работе на Render!")
 
-    # Запускаем Flask в фоновом потоке
-    flask_thread = Thread(target=run_flask)
-    flask_thread.daemon = True
-    flask_thread.start()
+    # Запускаем веб-сервер в фоне
+    Thread(target=run_flask, daemon=True).start()
 
-    logger.info("Бот начинает опрос (polling)...")
-    
-    try:
-        # Удаляем вебхуки, если они были, и запускаем polling
-        await bot.delete_webhook(drop_pending_updates=True)
-        await dp.start_polling(bot)
-    finally:
-        await bot.session.close()
+    logger.info("Бот запущен...")
+    await bot.delete_webhook(drop_pending_updates=True)
+    await dp.start_polling(bot)
 
 if __name__ == "__main__":
     try:
         asyncio.run(start_bot())
-    except (KeyboardInterrupt, SystemExit):
-        logger.info("Бот остановлен вручную")
     except Exception as e:
-        logger.critical(f"ФАТАЛЬНАЯ ОШИБКА ПРИ ЗАПУСКЕ: {e}", exc_info=True)
+        logger.error(f"Ошибка: {e}")
 
 # ============================================================
 # НАСТРОЙКИ
