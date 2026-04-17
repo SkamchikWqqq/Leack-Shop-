@@ -476,7 +476,7 @@ async def cat_edu(callback: types.CallbackQuery):
 
 
 # --------- КАТАЛОГ ---------
-@dp.callback_query_handler(text="catalog")
+@dp.callback_query(F.data == "catalog").
 async def catalog(callback: types.CallbackQuery):
     try:
         await callback.message.edit_caption(
