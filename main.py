@@ -72,7 +72,7 @@ async def cmd_start(message: types.Message):
 # ЗАПУСК БОТА В РАЗНЫХ ПРОЦЕССАХ
 # ============================================================
 async def start_bot():
-    await dp.start_polling()
+    await dp.start_polling(bot)
 
 def start_bot_in_thread():
     asyncio.run(start_bot())
