@@ -633,16 +633,21 @@ async def confirm_payment(callback: types.CallbackQuery):
 # ЗАПУСК
 # ============================================================
 async def main():
-    # Инициализация базы данных (функция должна быть у тебя в коде)
+    # 1. Инициализация базы данных
     try:
         init_db()
-    except NameError:
-        logger.warning("Функция init_db не найдена, пропуск...")
+        logger.info("База данных готова.")
+    except Exception as e:
+        logger.error(f"Ошибка БД: {e}")
 
-    # Запуск Flask в отдельном потоке
-    Thread(target=run_flask, daemon=True).start()
-    
-    logger.info("Удаление вебхука и запуск опроса...")
+    # 2. Запуск Flask для Render (ОБЯЗАТЕЛЬНО)
+    # Это предотвращает ошибку "No open ports detected"
+    server_thread = Thread(target=run_flask, daemon=True)
+    server_thread.start()
+    logger.info("Веб-сервер Flask запущен.")
+
+    # 3. Очистка очереди обновлений и запуск Polling
+    logger.info("Удаление вебхука и запуск бота...")
     await bot.delete_webhook(drop_pending_updates=True)
     
     # Запуск бота
@@ -652,4 +657,6 @@ if __name__ == "__main__":
     try:
         asyncio.run(main())
     except (KeyboardInterrupt, SystemExit):
-        logger.info("Бот остановлен")
+        logger.info("Бот остановлен пользователем")
+    except Exception as e:
+        logger.critical(f"Критическая ошибка при запуске: {e}")
