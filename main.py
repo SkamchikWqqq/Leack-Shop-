@@ -1,83 +1,50 @@
 import logging
 import os
 import asyncio
+import sqlite3
+import aiohttp
+from datetime import datetime
 from flask import Flask
 from threading import Thread
-from aiogram import Bot, Dispatcher, types
+
+from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import CommandStart
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
+from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.types import InlineKeyboardButton, FSInputFile, InlineKeyboardMarkup
 
 # Настройка логирования
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Flask сервер для Render (чтобы статус был "Live")
 app = Flask(__name__)
 
 @app.route('/')
 def index():
-    return "Бот в сети!", 200
+    return "Leack Shop Online", 200
 
 def run_flask():
     port = int(os.environ.get("PORT", 8080))
     app.run(host='0.0.0.0', port=port)
 
-# --- ГЛАВНАЯ ФУНКЦИЯ ---
-async def main():
-    token = os.getenv("BOT_TOKEN")
-    
-    # 1. Проверка токена
-    if not token:
-        logger.error("ТОКЕН НЕ НАЙДЕН!")
-        return
-
-    # 2. Инициализация (AIOGRAM 3.x)
-    bot = Bot(token=token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
-    dp = Dispatcher()
-
-    # --- ТЕСТОВЫЙ ХЕНДЛЕР (ПРОЦЕДУРА ПРОВЕРКИ) ---
-    @dp.message(CommandStart())
-    async def test_start(message: types.Message):
-        logger.info(f"Команда /start получена от {message.from_user.id}")
-        await message.answer("✅ СИСТЕМА РАБОТАЕТ! Если ты видишь это, значит база настроена верно.")
-
-    # Эхо-хендлер для проверки любого сообщения
-    @dp.message()
-    async def echo_all(message: types.Message):
-        logger.info(f"Получено сообщение: {message.text}")
-        await message.answer(f"Ты написал: {message.text}. Я тебя слышу!")
-
-    # 3. Запуск Flask
-    Thread(target=run_flask, daemon=True).start()
-
-    # 4. Запуск Polling
-    logger.info("Запуск опроса серверов Telegram...")
-    await bot.delete_webhook(drop_pending_updates=True)
-    
-    try:
-        await dp.start_polling(bot)
-    except Exception as e:
-        logger.error(f"Ошибка при работе бота: {e}")
-
-if __name__ == "__main__":
-    asyncio.run(main())
-
-# ============================================================
-# НАСТРОЙКИ
-# ============================================================
-BOT_TOKEN = os.getenv("BOT_TOKEN", "8798655968:AAEGVzmu2RPbI2z6UqBeuUjZQWkTuWbzGqM")  # Использование переменной окружения или ваш токен по умолчанию
-CRYPTOBOT_API_TOKEN = os.getenv("CRYPTOBOT_API_TOKEN", "553441:AAd905Dra8Qp1GdSHuBbnWJNj8DfZYIXljf")  # Использование переменной окружения или ваш API ключ по умолчанию
+# --- ТВОИ НАСТРОЙКИ ---
+BOT_TOKEN = os.getenv("BOT_TOKEN", "8798655968:AAEGVzmu2RPbI2z6UqBeuUjZQWkTuWbzGqM")
+CRYPTOBOT_API_TOKEN = os.getenv("CRYPTOBOT_API_TOKEN", "553441:AAd905Dra8Qp1GdSHuBbnWJNj8DfZYIXljf")
 
 ADMIN_IDS = []
 ADMIN_USERNAMES = ["cunpar"]
-
 CHANNEL_ID = -1002415070098
 CHANNEL_INVITE = "https://t.me/+yO5vZ2dUyRE3MzM0"
-
 REFERRAL_BONUS = 2
-REFERRAL_BALANCE_BONUS = 2  # +2 рубля на основной баланс при рефере
-
+REFERRAL_BALANCE_BONUS = 2
 IMAGE_PATH = "paranoia_attack.png"
+
+# Инициализация объектов для aiogram 3.x
+bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+dp = Dispatcher(storage=MemoryStorage())
 
 # ============================================================
 # НАСТРОЙКА БОТА
