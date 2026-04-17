@@ -353,7 +353,7 @@ async def create_invoice(amount: float, currency: str = "USDT", description: str
 # ============================================================
 bot = Bot(token=BOT_TOKEN)
 storage = MemoryStorage()
-dp = Dispatcher(bot, storage=storage)
+dp = Dispatcher(storage=storage)
 logging.basicConfig(level=logging.INFO)
 
 # ============================================================
