@@ -245,74 +245,78 @@ STARS_PRICES = {
 }
 
 # ============================================================
-# КЛАВИАТУРЫ
+# КЛАВИАТУРЫ (aiogram 3.x)
 # ============================================================
+
 def main_menu_kb(user_id=None):
     admin = is_admin(user_id) if user_id else False
-    kb = InlineKeyboardMarkup(row_width=1)
-    kb.add(InlineKeyboardButton(text="🗂 Каталог", callback_data="catalog"))
-    kb.add(InlineKeyboardButton(text="👤 Профиль", callback_data="profile"))
-    kb.add(InlineKeyboardButton(text="🔗 Рефералы", callback_data="referrals"))
+    builder = InlineKeyboardBuilder()
+    
+    builder.row(InlineKeyboardButton(text="🗂 Каталог", callback_data="catalog"))
+    builder.row(InlineKeyboardButton(text="👤 Профиль", callback_data="profile"))
+    builder.row(InlineKeyboardButton(text="🔗 Рефералы", callback_data="referrals"))
+    
     if admin:
-        kb.add(InlineKeyboardButton(text="📣 Рассылка", callback_data="broadcast"))
-        kb.add(InlineKeyboardButton(text="🎟 Генерация промо", callback_data="gen_promo"))
-    return kb
+        builder.row(InlineKeyboardButton(text="📣 Рассылка", callback_data="broadcast"))
+        builder.row(InlineKeyboardButton(text="🎟 Генерация промо", callback_data="gen_promo"))
+    
+    return builder.as_markup()
 
 def catalog_kb():
-    kb = InlineKeyboardMarkup(row_width=1)
-    kb.add(InlineKeyboardButton(text="Os1nt", callback_data="cat_osint"))
-    kb.add(InlineKeyboardButton(text="SN##ER", callback_data="cat_sniper"))
-    kb.add(InlineKeyboardButton(text="0БУЧЕНИЕ", callback_data="cat_edu"))
-    kb.add(InlineKeyboardButton(text="⬅️ Назад", callback_data="back_menu"))
-    return kb
+    builder = InlineKeyboardBuilder()
+    builder.row(InlineKeyboardButton(text="Os1nt", callback_data="cat_osint"))
+    builder.row(InlineKeyboardButton(text="SN##ER", callback_data="cat_sniper"))
+    builder.row(InlineKeyboardButton(text="0БУЧЕНИЕ", callback_data="cat_edu"))
+    builder.row(InlineKeyboardButton(text="⬅️ Назад", callback_data="back_menu"))
+    return builder.as_markup()
 
 def osint_kb():
-    kb = InlineKeyboardMarkup(row_width=1)
-    kb.add(InlineKeyboardButton(text="Базовый — 2$", callback_data="pay_osint_basic_2"))
-    kb.add(InlineKeyboardButton(text="Средний — 3$", callback_data="pay_osint_mid_3"))
-    kb.add(InlineKeyboardButton(text="VIP — 5$", callback_data="pay_osint_vip_5"))
-    kb.add(InlineKeyboardButton(text="⬅️ Назад", callback_data="catalog"))
-    return kb
+    builder = InlineKeyboardBuilder()
+    builder.row(InlineKeyboardButton(text="Базовый — 2$", callback_data="pay_osint_basic_2"))
+    builder.row(InlineKeyboardButton(text="Средний — 3$", callback_data="pay_osint_mid_3"))
+    builder.row(InlineKeyboardButton(text="VIP — 5$", callback_data="pay_osint_vip_5"))
+    builder.row(InlineKeyboardButton(text="⬅️ Назад", callback_data="catalog"))
+    return builder.as_markup()
 
 def sniper_kb():
-    kb = InlineKeyboardMarkup(row_width=1)
-    kb.add(InlineKeyboardButton(text="Базовый — 3$", callback_data="pay_sniper_basic_3"))
-    kb.add(InlineKeyboardButton(text="Средний — 7$", callback_data="pay_sniper_mid_7"))
-    kb.add(InlineKeyboardButton(text="Сильный — 10$", callback_data="pay_sniper_strong_10"))
-    kb.add(InlineKeyboardButton(text="⬅️ Назад", callback_data="catalog"))
-    return kb
+    builder = InlineKeyboardBuilder()
+    builder.row(InlineKeyboardButton(text="Базовый — 3$", callback_data="pay_sniper_basic_3"))
+    builder.row(InlineKeyboardButton(text="Средний — 7$", callback_data="pay_sniper_mid_7"))
+    builder.row(InlineKeyboardButton(text="Сильный — 10$", callback_data="pay_sniper_strong_10"))
+    builder.row(InlineKeyboardButton(text="⬅️ Назад", callback_data="catalog"))
+    return builder.as_markup()
 
 def edu_kb():
-    kb = InlineKeyboardMarkup(row_width=1)
-    kb.add(InlineKeyboardButton(text="Базовое — 2$", callback_data="pay_edu_basic_2"))
-    kb.add(InlineKeyboardButton(text="Среднее — 5$", callback_data="pay_edu_mid_5"))
-    kb.add(InlineKeyboardButton(text="VIP — 8$", callback_data="pay_edu_vip_8"))
-    kb.add(InlineKeyboardButton(text="⬅️ Назад", callback_data="catalog"))
-    return kb
+    builder = InlineKeyboardBuilder()
+    builder.row(InlineKeyboardButton(text="Базовое — 2$", callback_data="pay_edu_basic_2"))
+    builder.row(InlineKeyboardButton(text="Среднее — 5$", callback_data="pay_edu_mid_5"))
+    builder.row(InlineKeyboardButton(text="VIP — 8$", callback_data="pay_edu_vip_8"))
+    builder.row(InlineKeyboardButton(text="⬅️ Назад", callback_data="catalog"))
+    return builder.as_markup()
 
 def payment_confirmation_kb(invoice_url, amount, label):
-    kb = InlineKeyboardMarkup(row_width=1)
-    kb.add(InlineKeyboardButton(text=f"💰 CryptoBot", url=invoice_url))
-    kb.add(InlineKeyboardButton(text=f"⭐ Звёзды ({int(amount)}$)", callback_data=f"pay_stars_{int(amount)}"))
-    kb.add(InlineKeyboardButton(text="✅ Я ОПЛАТИЛ", callback_data=f"confirm_payment_{amount}"))
-    kb.add(InlineKeyboardButton(text="⬅️ Назад", callback_data="catalog"))
-    return kb
+    builder = InlineKeyboardBuilder()
+    builder.row(InlineKeyboardButton(text="💰 CryptoBot", url=invoice_url))
+    builder.row(InlineKeyboardButton(text=f"⭐ Звёзды ({int(amount)}$)", callback_data=f"pay_stars_{int(amount)}"))
+    builder.row(InlineKeyboardButton(text="✅ Я ОПЛАТИЛ", callback_data=f"confirm_payment_{amount}"))
+    builder.row(InlineKeyboardButton(text="⬅️ Назад", callback_data="catalog"))
+    return builder.as_markup()
 
 def profile_kb():
-    kb = InlineKeyboardMarkup(row_width=1)
-    kb.add(InlineKeyboardButton(text="💰 Пополнить баланс", callback_data="topup"))
-    kb.add(InlineKeyboardButton(text="💸 Вывести деньги", callback_data="withdraw"))
-    kb.add(InlineKeyboardButton(text="📋 История пополнений", callback_data="pay_history"))
-    kb.add(InlineKeyboardButton(text="🎟 Активировать промокод", callback_data="activate_promo"))
-    kb.add(InlineKeyboardButton(text="⬅️ Назад", callback_data="back_menu"))
-    return kb
+    builder = InlineKeyboardBuilder()
+    builder.row(InlineKeyboardButton(text="💰 Пополнить баланс", callback_data="topup"))
+    builder.row(InlineKeyboardButton(text="💸 Вывести деньги", callback_data="withdraw"))
+    builder.row(InlineKeyboardButton(text="📋 История пополнений", callback_data="pay_history"))
+    builder.row(InlineKeyboardButton(text="🎟 Активировать промокод", callback_data="activate_promo"))
+    builder.row(InlineKeyboardButton(text="⬅️ Назад", callback_data="back_menu"))
+    return builder.as_markup()
 
 def promo_type_kb():
-    kb = InlineKeyboardMarkup(row_width=1)
-    kb.add(InlineKeyboardButton(text="✍️ Вручную", callback_data="promo_manual"))
-    kb.add(InlineKeyboardButton(text="🎲 Рандомно", callback_data="promo_random"))
-    kb.add(InlineKeyboardButton(text="⬅️ Назад", callback_data="back_menu"))
-    return kb
+    builder = InlineKeyboardBuilder()
+    builder.row(InlineKeyboardButton(text="✍️ Вручную", callback_data="promo_manual"))
+    builder.row(InlineKeyboardButton(text="🎲 Рандомно", callback_data="promo_random"))
+    builder.row(InlineKeyboardButton(text="⬅️ Назад", callback_data="back_menu"))
+    return builder.as_markup()
 
 # ============================================================
 # ПРОВЕРКА ПОДПИСКИ
