@@ -529,7 +529,7 @@ async def cat_edu(callback: types.CallbackQuery):
 # ВАЖНО: хендлер pay_stars_ должен быть ВЫШЕ handle_payment,
 # иначе handle_payment перехватит колбэк pay_stars_X первым
 
-@dp.callback_query_handler(lambda c: c.data and c.data.startswith("pay_stars_"))
+@dp.callback_query(F.data.startswith("pay_stars_"))
 async def pay_stars(callback: types.CallbackQuery):
     # Формат: pay_stars_{section}_{tier}
     parts = callback.data.split("_")
