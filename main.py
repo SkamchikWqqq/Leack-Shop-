@@ -352,13 +352,6 @@ async def create_invoice(amount: float, currency: str = "USDT", description: str
             result = await resp.json()
             return result
 
-# ============================================================
-# БОТ И ДИСПЕТЧЕР
-# ============================================================
-bot = Bot(token=BOT_TOKEN)
-storage = MemoryStorage()
-dp = Dispatcher(storage=storage)
-logging.basicConfig(level=logging.INFO)
  #============================================================
 # ИСПРАВЛЕННЫЕ ХЭНДЛЕРЫ ============================================================
 
