@@ -502,10 +502,11 @@ async def cat_edu(callback: types.CallbackQuery):
     await callback.answer()
 
 # ============================================================
-# ОБРАБОТКА КНОПОК МЕНЮ
+# ВСЕ ХЕНДЛЕРЫ КНОПОК (ИСПРАВЛЕНО)
 # ============================================================
 
-# 1. Кнопка КАТАЛОГ
+# --- ГЛАВНОЕ МЕНЮ ---
+
 @dp.callback_query(F.data == "catalog")
 async def process_catalog(callback: types.CallbackQuery):
     await callback.message.edit_caption(
@@ -514,101 +515,95 @@ async def process_catalog(callback: types.CallbackQuery):
     )
     await callback.answer()
 
-# 2. Кнопка ПРОФИЛЬ
 @dp.callback_query(F.data == "profile")
 async def process_profile(callback: types.CallbackQuery):
-    # Если функции get_user нет, замени на свою логику получения баланса
-    user_id = callback.from_user.id
+    user = get_user(callback.from_user.id)
+    balance = user[2] if user else 0
     await callback.message.edit_caption(
-        caption=f"👤 <b>Ваш профиль</b>\n\n🆔 ID: <code>{user_id}</code>\n💰 Баланс: 0.00$",
+        caption=f"👤 <b>Ваш профиль</b>\n\n🆔 ID: <code>{callback.from_user.id}</code>\n💰 Баланс: <b>{balance}$</b>",
         reply_markup=profile_kb()
     )
     await callback.answer()
 
-# 3. Кнопка РЕФЕРАЛЫ
 @dp.callback_query(F.data == "referrals")
 async def process_referrals(callback: types.CallbackQuery):
     bot_info = await bot.get_me()
     ref_link = f"https://t.me/{bot_info.username}?start={callback.from_user.id}"
     await callback.message.edit_caption(
-        caption=f"🔗 <b>Реферальная система</b>\n\nВаша ссылка:\n{ref_link}",
-        reply_markup=None # Или добавь кнопку "Назад"
+        caption=f"🔗 <b>Реферальная система</b>\n\nВаша ссылка для приглашения:\n<code>{ref_link}</code>",
+        reply_markup=back_to_menu_kb() # Убедись, что эта функция создана или замени на main_menu_kb()
     )
     await callback.answer()
 
-# 4. Кнопка НАЗАД (чтобы работала кнопка возврата в меню)
-@dp.callback_query(F.data == "back_menu")
-async def process_back_menu(callback: types.CallbackQuery):
-    # Удаляем текущее сообщение и отправляем главное меню заново
-    await callback.message.delete()
-    await send_main_menu(callback.from_user.id, callback.message.chat.id)
-    await callback.answer()
+# --- КАТЕГОРИИ КАТАЛОГА ---
 
-# 5. Хендлеры для КАТЕГОРИЙ (Osint, Sniper и т.д.)
 @dp.callback_query(F.data == "cat_osint")
 async def process_osint(callback: types.CallbackQuery):
-    await callback.message.edit_caption(
-        caption="🔍 <b>Os1nt</b>\n\nВыберите тариф:",
-        reply_markup=osint_kb()
-    )
+    await callback.message.edit_caption(caption="🔍 <b>Os1nt</b>\n\nВыберите тариф:", reply_markup=osint_kb())
     await callback.answer()
 
 @dp.callback_query(F.data == "cat_sniper")
 async def process_sniper(callback: types.CallbackQuery):
-    await callback.message.edit_caption(
-        caption="🎯 <b>SN##ER</b>\n\nВыберите тариф:",
-        reply_markup=sniper_kb()
-    )
-    await callback.answer()
-
-
-# --------- КАТАЛОГ ---------
-@dp.callback_query(F.data == "catalog")
-async def catalog(callback: types.CallbackQuery):
-    try:
-        await callback.message.edit_caption(
-            caption="🗂 <b>Каталог</b>\n\nВыбери раздел:",
-            reply_markup=catalog_kb(),
-            parse_mode="HTML"
-        )
-    except Exception:
-        pass
-    await callback.answer()
-
-@dp.callback_query(F.data == "cat_osint")
-async def cat_osint(callback: types.CallbackQuery):
-    try:
-        await callback.message.edit_caption(
-            caption="🔍 <b>Os1nt</b>\n\nВыбери тариф:",
-            reply_markup=osint_kb(),
-            parse_mode="HTML"
-        )
-    except Exception:
-        pass
-    await callback.answer()
-
-@dp.callback_query(F.data == "cat_sniper")
-async def cat_sniper(callback: types.CallbackQuery):
-    try:
-        await callback.message.edit_caption(
-            caption="🎯 <b>SN##ER</b>\n\nВыбери тариф:",
-            reply_markup=sniper_kb(),
-            parse_mode="HTML"
-        )
-    except Exception:
-        pass
+    await callback.message.edit_caption(caption="🎯 <b>SN##ER</b>\n\nВыберите тариф:", reply_markup=sniper_kb())
     await callback.answer()
 
 @dp.callback_query(F.data == "cat_edu")
-async def cat_edu(callback: types.CallbackQuery):
-    try:
-        await callback.message.edit_caption(
-            caption="📚 <b>0БУЧЕНИЕ</b>\n\nВыбери тариф:",
-            reply_markup=edu_kb(),
-            parse_mode="HTML"
-        )
-    except Exception:
-        pass
+async def process_edu(callback: types.CallbackQuery):
+    await callback.message.edit_caption(caption="📚 <b>0БУЧЕНИЕ</b>\n\nВыберите тариф:", reply_markup=edu_kb())
+    await callback.answer()
+
+# --- КНОПКИ ПРОФИЛЯ ---
+
+@dp.callback_query(F.data == "topup")
+async def process_topup(callback: types.CallbackQuery):
+    await callback.message.edit_caption(caption="💰 Введите сумму для пополнения баланса:", reply_markup=back_to_menu_kb())
+    await callback.answer()
+
+@dp.callback_query(F.data == "withdraw")
+async def process_withdraw(callback: types.CallbackQuery):
+    await callback.answer("❌ Вывод средств временно недоступен", show_alert=True)
+
+@dp.callback_query(F.data == "pay_history")
+async def process_pay_history(callback: types.CallbackQuery):
+    history = get_payment_history(callback.from_user.id)
+    if not history:
+        text = "📋 У вас пока нет истории платежей."
+    else:
+        text = "📋 <b>История последних платежей:</b>\n\n" + "\n".join([f"🔹 {h[0]}$ ({h[1]}) - {h[2]}" for h in history])
+    await callback.message.edit_caption(caption=text, reply_markup=back_to_menu_kb())
+    await callback.answer()
+
+@dp.callback_query(F.data == "activate_promo")
+async def process_activate_promo(callback: types.CallbackQuery, state: FSMContext):
+    await callback.message.edit_caption(caption="🎟 Введите промокод:")
+    await state.set_state(UserStates.waiting_promo_input)
+    await callback.answer()
+
+# --- АДМИН КНОПКИ ---
+
+@dp.callback_query(F.data == "broadcast")
+async def process_broadcast(callback: types.CallbackQuery, state: FSMContext):
+    if is_admin(callback.from_user.id):
+        await callback.message.answer("📣 Введите текст для рассылки всем пользователям:")
+        await state.set_state(AdminStates.waiting_broadcast)
+    else:
+        await callback.answer("❌ Доступ запрещен", show_alert=True)
+    await callback.answer()
+
+@dp.callback_query(F.data == "gen_promo")
+async def process_gen_promo(callback: types.CallbackQuery):
+    if is_admin(callback.from_user.id):
+        await callback.message.edit_caption(caption="🎟 Выберите тип промокода:", reply_markup=promo_type_kb())
+    else:
+        await callback.answer("❌ Доступ запрещен", show_alert=True)
+    await callback.answer()
+
+# --- СИСТЕМНЫЕ ---
+
+@dp.callback_query(F.data == "back_menu")
+async def process_back_menu(callback: types.CallbackQuery):
+    await callback.message.delete()
+    await send_main_menu(callback.from_user.id, callback.message.chat.id)
     await callback.answer()
 
 
