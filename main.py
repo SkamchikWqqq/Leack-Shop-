@@ -602,9 +602,13 @@ async def process_gen_promo(callback: types.CallbackQuery):
 
 @dp.callback_query(F.data == "back_menu")
 async def process_back_menu(callback: types.CallbackQuery):
-    await callback.message.delete()
+    try:
+        await callback.message.delete()
+    except:
+        pass
     await send_main_menu(callback.from_user.id, callback.message.chat.id)
     await callback.answer()
+
 
 # --------- ИСПРАВЛЕННАЯ ОПЛАТА ---------
 
