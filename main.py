@@ -329,10 +329,10 @@ async def check_subscription(bot: Bot, user_id: int) -> bool:
         return False
 
 def sub_check_kb():
-    kb = InlineKeyboardMarkup(row_width=1)
-    kb.add(InlineKeyboardButton(text="📢 Подписаться на канал", url=CHANNEL_INVITE))
-    kb.add(InlineKeyboardButton(text="✅ Я подписался", callback_data="check_sub"))
-    return kb
+    builder = InlineKeyboardBuilder()
+    builder.row(InlineKeyboardButton(text="📢 Подписаться на канал", url=CHANNEL_INVITE))
+    builder.row(InlineKeyboardButton(text="✅ Я подписался", callback_data="check_sub"))
+    return builder.as_markup()
 
 # ============================================================
 # CRYPTOBOT
