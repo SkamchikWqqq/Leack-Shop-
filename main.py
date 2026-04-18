@@ -359,7 +359,7 @@ bot = Bot(token=BOT_TOKEN)
 storage = MemoryStorage()
 dp = Dispatcher(storage=storage)
 logging.basicConfig(level=logging.INFO)
- ============================================================
+ #============================================================
 # ИСПРАВЛЕННЫЕ ХЭНДЛЕРЫ ============================================================
 
 async def send_main_menu(user_id: int, chat_id: int):
