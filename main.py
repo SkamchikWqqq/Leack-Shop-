@@ -359,26 +359,35 @@ bot = Bot(token=BOT_TOKEN)
 storage = MemoryStorage()
 dp = Dispatcher(storage=storage)
 logging.basicConfig(level=logging.INFO)
+ ============================================================
+# ИСПРАВЛЕННЫЕ ХЭНДЛЕРЫ ============================================================
 
-# ============================================================
-# ХЭНДЛЕРЫ
-# ============================================================
 async def send_main_menu(user_id: int, chat_id: int):
-    # В 3.х для отправки локальных файлов лучше использовать FSInputFile
-    photo = FSInputFile(IMAGE_PATH)
-    await bot.send_photo(
-        chat_id=chat_id,
-        photo=photo,
-        caption="🏠 <b>Главное меню</b>\n\nВыбери раздел:",
-        reply_markup=main_menu_kb(user_id)
-    )
+    """Отправка главного меню с проверкой наличия фото"""
+    try:
+        photo = FSInputFile(IMAGE_PATH)
+        await bot.send_photo(
+            chat_id=chat_id,
+            photo=photo,
+            caption="🏠 <b>Главное меню</b>\n\nВыбери раздел:",
+            reply_markup=main_menu_kb(user_id)
+        )
+    except Exception as e:
+        # Если фото не найдено или ошибка — отправляем просто текст
+        print(f"Ошибка при отправке фото: {e}")
+        await bot.send_message(
+            chat_id=chat_id,
+            text="🏠 <b>Главное меню</b>\n\nВыбери раздел:",
+            reply_markup=main_menu_kb(user_id)
+        )
 
-# Заменили @dp.message_handler на @dp.message(CommandStart())
 @dp.message(CommandStart())
 async def cmd_start(message: types.Message):
     user = message.from_user
     args = message.text.split()
     referred_by = None
+    
+    # Логика рефералов
     if len(args) > 1:
         try:
             referred_by = int(args[1])
@@ -391,44 +400,59 @@ async def cmd_start(message: types.Message):
     if not existing:
         register_user(user.id, user.username, referred_by)
         if referred_by and get_user(referred_by):
-            # Эти функции (add_ref_balance и др.) должны быть объявлены выше в твоем коде
             add_ref_balance(referred_by, REFERRAL_BONUS)
             add_balance(referred_by, REFERRAL_BALANCE_BONUS)
             try:
-                await bot.send_message(referred_by,
+                await bot.send_message(
+                    referred_by,
                     f"🎉 По твоей реф-ссылке зарегистрировался новый пользователь!\n"
                     f"💸 +{REFERRAL_BONUS}₽ на реферальный баланс.\n"
-                    f"💰 +{REFERRAL_BALANCE_BONUS}₽ на основной баланс.")
+                    f"💰 +{REFERRAL_BALANCE_BONUS}₽ на основной баланс."
+                )
             except Exception:
                 pass
 
     if user.username and user.username.lower() in ADMIN_USERNAMES:
         set_admin(user.id)
 
-    # В 3.х передаем объект бота явно, если функция check_subscription это требует
+    # ПРОВЕРКА ПОДПИСКИ (Обязательно передаем bot)
     subscribed = await check_subscription(bot, user.id) 
     if not subscribed:
-        photo = FSInputFile(IMAGE_PATH)
-        await message.answer_photo(
-            photo=photo,
-            caption=(
+        try:
+            photo = FSInputFile(IMAGE_PATH)
+            await message.answer_photo(
+                photo=photo,
+                caption=(
+                    "👋 Добро пожаловать!\n\n"
+                    "❗️ Для доступа к боту необходимо подписаться на наш канал."
+                ),
+                reply_markup=sub_check_kb()
+            )
+        except Exception:
+            await message.answer(
                 "👋 Добро пожаловать!\n\n"
-                "❗️ Для доступа к боту необходимо подписаться на наш канал."
-            ),
-            reply_markup=sub_check_kb()
-        )
+                "❗️ Для доступа к боту необходимо подписаться на наш канал.",
+                reply_markup=sub_check_kb()
+            )
         return
 
     await send_main_menu(message.from_user.id, message.chat.id)
 
-# Заменили @dp.callback_query_handler(text=...) на @dp.callback_query(F.data == ...)
 @dp.callback_query(F.data == "check_sub")
 async def check_sub_callback(callback: types.CallbackQuery):
-    subscribed = await check_subscription(callback.from_user.id)
+    # ИСПРАВЛЕНО: Добавлен аргумент callback.bot
+    subscribed = await check_subscription(callback.bot, callback.from_user.id)
+    
     if not subscribed:
-        await callback.answer("❌ Ты ещё не подписался на все каналы!", show_alert=True)
+        await callback.answer("❌ Ты ещё не подписался на канал!", show_alert=True)
         return
-    await callback.message.delete()
+    
+    # Если подписался — удаляем старое и шлем меню
+    try:
+        await callback.message.delete()
+    except Exception:
+        pass
+        
     await send_main_menu(callback.from_user.id, callback.message.chat.id)
     await callback.answer()
 
