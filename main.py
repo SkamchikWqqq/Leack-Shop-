@@ -690,6 +690,29 @@ async def confirm_payment(callback: types.CallbackQuery):
         caption=f"💰 <b>Баланс пополнен!</b>\n\nТекущий баланс обновлен.",
         reply_markup=main_menu_kb(callback.from_user.id)
     )
+@dp.message(AdminStates.waiting_broadcast)
+async def perform_broadcast(message: types.Message, state: FSMContext):
+    # Проверка, что ты админ
+    if message.from_user.username.lower() not in ADMIN_USERNAMES:
+        await state.clear()
+        return
+
+    users = get_all_users() # Функция, которая берет всех ID из базы
+    count = 0
+    await message.answer(f"🚀 Начинаю рассылку на {len(users)} пользователей...")
+    
+    for user_id in users:
+        try:
+            # Если в базе user_id это кортеж (например, (12345,)), берем [0]
+            uid = user_id[0] if isinstance(user_id, tuple) else user_id
+            await bot.send_message(uid, message.text)
+            count += 1
+            await asyncio.sleep(0.05) # Чтобы Telegram не забанил за спам
+        except Exception:
+            continue
+            
+    await message.answer(f"✅ Рассылка завершена! Сообщение получили {count} человек.")
+    await state.clear()
 
 # ============================================================
 # ЗАПУСК
