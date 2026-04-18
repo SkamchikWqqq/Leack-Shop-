@@ -501,6 +501,65 @@ async def cat_edu(callback: types.CallbackQuery):
         pass
     await callback.answer()
 
+# ============================================================
+# ОБРАБОТКА КНОПОК МЕНЮ
+# ============================================================
+
+# 1. Кнопка КАТАЛОГ
+@dp.callback_query(F.data == "catalog")
+async def process_catalog(callback: types.CallbackQuery):
+    await callback.message.edit_caption(
+        caption="🗂 <b>Каталог товаров</b>\n\nВыбери нужную категорию:",
+        reply_markup=catalog_kb()
+    )
+    await callback.answer()
+
+# 2. Кнопка ПРОФИЛЬ
+@dp.callback_query(F.data == "profile")
+async def process_profile(callback: types.CallbackQuery):
+    # Если функции get_user нет, замени на свою логику получения баланса
+    user_id = callback.from_user.id
+    await callback.message.edit_caption(
+        caption=f"👤 <b>Ваш профиль</b>\n\n🆔 ID: <code>{user_id}</code>\n💰 Баланс: 0.00$",
+        reply_markup=profile_kb()
+    )
+    await callback.answer()
+
+# 3. Кнопка РЕФЕРАЛЫ
+@dp.callback_query(F.data == "referrals")
+async def process_referrals(callback: types.CallbackQuery):
+    bot_info = await bot.get_me()
+    ref_link = f"https://t.me/{bot_info.username}?start={callback.from_user.id}"
+    await callback.message.edit_caption(
+        caption=f"🔗 <b>Реферальная система</b>\n\nВаша ссылка:\n{ref_link}",
+        reply_markup=None # Или добавь кнопку "Назад"
+    )
+    await callback.answer()
+
+# 4. Кнопка НАЗАД (чтобы работала кнопка возврата в меню)
+@dp.callback_query(F.data == "back_menu")
+async def process_back_menu(callback: types.CallbackQuery):
+    # Удаляем текущее сообщение и отправляем главное меню заново
+    await callback.message.delete()
+    await send_main_menu(callback.from_user.id, callback.message.chat.id)
+    await callback.answer()
+
+# 5. Хендлеры для КАТЕГОРИЙ (Osint, Sniper и т.д.)
+@dp.callback_query(F.data == "cat_osint")
+async def process_osint(callback: types.CallbackQuery):
+    await callback.message.edit_caption(
+        caption="🔍 <b>Os1nt</b>\n\nВыберите тариф:",
+        reply_markup=osint_kb()
+    )
+    await callback.answer()
+
+@dp.callback_query(F.data == "cat_sniper")
+async def process_sniper(callback: types.CallbackQuery):
+    await callback.message.edit_caption(
+        caption="🎯 <b>SN##ER</b>\n\nВыберите тариф:",
+        reply_markup=sniper_kb()
+    )
+    await callback.answer()
 
 
 # --------- КАТАЛОГ ---------
