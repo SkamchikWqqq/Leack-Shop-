@@ -589,142 +589,85 @@ async def process_back_menu(callback: types.CallbackQuery):
 
 
 # --------- ПОЛНЫЙ БЛОК ОПЛАТЫ (CryptoBot + Stars) ---------
-
 @dp.callback_query(F.data.startswith("pay_"))
 async def handle_all_payments(callback: types.CallbackQuery):
-    # 1. Если нажали именно на кнопку звёзд
-    if "stars" in callback.data:
+    # 1. Сначала проверяем, не нажали ли уже на конкретную оплату звёздами
+    if "pay_stars_" in callback.data:
         parts = callback.data.split("_")
-        stars_amount = int(parts[-1]) if parts[-1].isdigit() else 50
-        prices = [types.LabeledPrice(label="Пополнение баланса", amount=stars_amount)]
+        try:
+            stars_amount = int(parts[-1])
+        except:
+            stars_amount = 50
+            
+        prices = [types.LabeledPrice(label="Пополнение", amount=stars_amount)]
         
         try:
+            # Отправляем счёт ОТДЕЛЬНЫМ сообщением, чтобы ничего не моргало
             await bot.send_invoice(
                 chat_id=callback.from_user.id,
                 title="Оплата Stars",
-                description=f"Зачисление {stars_amount} ⭐ на баланс",
-                payload=f"stars_{stars_amount}_{callback.from_user.id}",
+                description=f"Зачисление {stars_amount} ⭐",
+                payload=f"stars_{stars_amount}",
                 provider_token="",
                 currency="XTR",
                 prices=prices
             )
             await callback.answer()
         except Exception as e:
-            await callback.answer(f"❌ Ошибка Stars: {e}", show_alert=True)
-        return
+            await callback.answer(f"❌ Ошибка Stars: {e}")
+        return  # ВАЖНО: Останавливаем выполнение здесь, чтобы код ниже не стер кнопки!
 
-    # 2. Если выбрали категорию (Osint/Sniper) — создаем инвойс CryptoBot
+    # 2. Если это выбор тарифа (Osint/Sniper)
     parts = callback.data.split("_")
-    if len(parts) < 4: return
+    if len(parts) < 4: 
+        return
 
     category = parts[1].upper()
     tier = parts[2].upper()
     try:
         amount = float(parts[3])
-    except: return
+    except: 
+        return
 
-    await callback.answer("⏳ Создаю счет...", show_alert=False)
+    # Показываем уведомление о создании счета
+    await callback.answer("⏳ Генерирую способы оплаты...")
 
     try:
+        # Создаем инвойс в CryptoBot
         result = await create_invoice(amount=amount, description=f"{category} {tier}")
+        
         if result.get("ok"):
             invoice_url = result["result"]["pay_url"]
             invoice_id = result["result"]["invoice_id"]
             save_payment(callback.from_user.id, amount, "USDT", str(invoice_id))
 
-            # --- ФОРМИРУЕМ КНОПКИ (ДОБАВЛЯЕМ STARS) ---
+            # Формируем кнопки
             builder = InlineKeyboardBuilder()
-            # Первая кнопка — Крипта
-            builder.row(InlineKeyboardButton(text=f"💳 Оплатить {amount}$ (Crypto)", url=invoice_url))
+            builder.row(InlineKeyboardButton(text=f"💳 Оплатить {amount}$ (Крипта)", url=invoice_url))
             
-            # Вторая кнопка — Звёзды (Курс 1$ = 50 звёзд)
+            # Добавляем кнопку звёзд (1$ = 50 звезд)
             stars_val = int(amount * 50)
             builder.row(InlineKeyboardButton(text=f"⭐ Оплатить {stars_val} Stars", callback_data=f"pay_stars_{stars_val}"))
             
             builder.row(InlineKeyboardButton(text="✅ Я ОПЛАТИЛ", callback_data=f"conf_{amount}_{invoice_id}"))
             builder.row(InlineKeyboardButton(text="⬅️ Назад", callback_data="catalog"))
 
+            # РЕДАКТИРУЕМ ОДИН РАЗ В САМОМ КОНЦЕ
             await callback.message.edit_caption(
                 caption=(
                     f"💳 <b>Оплата тарифа</b>\n\n"
                     f"Раздел: <b>{category}</b>\n"
                     f"Тариф: <b>{tier}</b>\n"
                     f"Сумма: <b>{amount}$</b> / <b>{stars_val} ⭐</b>\n\n"
-                    f"Выберите способ оплаты:"
+                    f"Выберите удобный способ оплаты:"
                 ),
                 reply_markup=builder.as_markup()
             )
         else:
             await callback.answer("❌ Ошибка CryptoBot API", show_alert=True)
+            
     except Exception as e:
         await callback.answer(f"❌ Ошибка: {str(e)}", show_alert=True)
-
-
-    # 2. ОБРАБОТКА CRYPTOBOT
-    # Ожидаемый формат: pay_osint_basic_2 (категория, тариф, сумма)
-    parts = callback.data.split("_")
-    if len(parts) < 4:
-        return
-
-    category = parts[1].upper()
-    tier = parts[2].upper()
-    try:
-        amount = float(parts[3])
-    except ValueError:
-        return
-
-    await callback.answer("⏳ Создаю счет...", show_alert=False)
-
-    try:
-        result = await create_invoice(amount=amount, description=f"{category} {tier}")
-        if result.get("ok"):
-            invoice_url = result["result"]["pay_url"]
-            invoice_id = result["result"]["invoice_id"]
-
-            save_payment(callback.from_user.id, amount, "USDT", str(invoice_id))
-
-            builder = InlineKeyboardBuilder()
-            builder.row(InlineKeyboardButton(text=f"💳 Оплатить {amount}$", url=invoice_url))
-            builder.row(InlineKeyboardButton(text="✅ Я ОПЛАТИЛ", callback_data=f"conf_{amount}_{invoice_id}"))
-            builder.row(InlineKeyboardButton(text="⬅️ Назад", callback_data="catalog"))
-
-            await callback.message.edit_caption(
-                caption=(
-                    f"💳 <b>Оплата через CryptoBot</b>\n\n"
-                    f"Раздел: <b>{category}</b>\n"
-                    f"Тариф: <b>{tier}</b>\n"
-                    f"Сумма: <b>{amount}$</b>\n\n"
-                    f"Оплатите по кнопке ниже и нажмите «Я ОПЛАТИЛ»."
-                ),
-                reply_markup=builder.as_markup()
-            )
-        else:
-            await callback.answer("❌ Ошибка CryptoBot API", show_alert=True)
-    except Exception as e:
-        await callback.answer(f"❌ Ошибка: {str(e)}", show_alert=True)
-
-# --- ТЕХНИЧЕСКИЕ ХЕНДЛЕРЫ ДЛЯ STARS (ОБЯЗАТЕЛЬНО) ---
-
-@dp.pre_checkout_query()
-async def process_pre_checkout_query(pre_checkout_query: types.PreCheckoutQuery):
-    # Без этого подтверждения кнопка "Оплатить" в Telegram не сработает
-    await bot.answer_pre_checkout_query(pre_checkout_query.id, ok=True)
-
-@dp.message(F.successful_payment)
-async def success_payment_handler(message: types.Message):
-    # Начисление баланса после успешной оплаты звездами
-    stars_amount = message.successful_payment.total_amount
-    
-    # Курс: 50 звезд = 1$. Можно поменять под свои нужды.
-    usd_amount = round(stars_amount / 50, 2)
-    
-    save_payment(message.from_user.id, usd_amount, "XTR", "stars_internal", status="paid")
-    add_balance(message.from_user.id, usd_amount)
-    
-    await message.answer(
-        f"✅ <b>Оплата Stars прошла успешно!</b>\n"
-        f"На ваш баланс зачислено: <b>{usd_amount}$</b>"
-    )
 
 # --- ПОДТВЕРЖДЕНИЕ CRYPTOBOT ---
 
