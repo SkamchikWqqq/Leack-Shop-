@@ -588,29 +588,38 @@ async def process_back_menu(callback: types.CallbackQuery):
     await callback.answer()
 
 
-# --------- ИСПРАВЛЕННАЯ ОПЛАТА ---------
+# --------- ПОЛНЫЙ БЛОК ОПЛАТЫ (CryptoBot + Stars) ---------
 
 @dp.callback_query(F.data.startswith("pay_"))
 async def handle_all_payments(callback: types.CallbackQuery):
-    # 1. Если это Telegram Stars
+    # 1. ОБРАБОТКА TELEGRAM STARS
     if "stars" in callback.data:
         parts = callback.data.split("_")
-        stars_amount = int(parts[-1]) if parts[-1].isdigit() else 50
-        prices = [types.LabeledPrice(label="Услуга", amount=stars_amount)]
-        await bot.send_invoice(
-            chat_id=callback.from_user.id,
-            title="Оплата услуги",
-            description=f"Оплата {stars_amount}⭐ через Telegram Stars",
-            payload=f"stars_{stars_amount}_{callback.from_user.id}",
-            provider_token="",
-            currency="XTR",
-            prices=prices
-        )
-        await callback.answer()
+        # Извлекаем количество звезд из конца callback_data
+        try:
+            stars_amount = int(parts[-1])
+        except (ValueError, IndexError):
+            stars_amount = 50 # Значение по умолчанию
+
+        prices = [types.LabeledPrice(label="Пополнение баланса", amount=stars_amount)]
+        
+        try:
+            await bot.send_invoice(
+                chat_id=callback.from_user.id,
+                title="Оплата Telegram Stars",
+                description=f"Пополнение баланса на {stars_amount} ⭐",
+                payload=f"stars_{stars_amount}_{callback.from_user.id}",
+                provider_token="", # Для звезд всегда пусто
+                currency="XTR",
+                prices=prices
+            )
+            await callback.answer()
+        except Exception as e:
+            await callback.answer(f"❌ Ошибка Stars: {e}", show_alert=True)
         return
 
-    # 2. Если это CryptoBot (Osint, Sniper, Edu)
-    # Разбираем: pay_osint_basic_2 -> category=OSINT, tier=BASIC, amount=2
+    # 2. ОБРАБОТКА CRYPTOBOT
+    # Ожидаемый формат: pay_osint_basic_2 (категория, тариф, сумма)
     parts = callback.data.split("_")
     if len(parts) < 4:
         return
@@ -625,28 +634,25 @@ async def handle_all_payments(callback: types.CallbackQuery):
     await callback.answer("⏳ Создаю счет...", show_alert=False)
 
     try:
-        # Твоя функция создания инвойса
         result = await create_invoice(amount=amount, description=f"{category} {tier}")
         if result.get("ok"):
             invoice_url = result["result"]["pay_url"]
             invoice_id = result["result"]["invoice_id"]
-            
-            # Сохраняем в базу
+
             save_payment(callback.from_user.id, amount, "USDT", str(invoice_id))
-            
-            # Создаем кнопки
+
             builder = InlineKeyboardBuilder()
             builder.row(InlineKeyboardButton(text=f"💳 Оплатить {amount}$", url=invoice_url))
             builder.row(InlineKeyboardButton(text="✅ Я ОПЛАТИЛ", callback_data=f"conf_{amount}_{invoice_id}"))
             builder.row(InlineKeyboardButton(text="⬅️ Назад", callback_data="catalog"))
-            
+
             await callback.message.edit_caption(
                 caption=(
-                    f"💳 <b>Оплата тарифа</b>\n\n"
+                    f"💳 <b>Оплата через CryptoBot</b>\n\n"
                     f"Раздел: <b>{category}</b>\n"
                     f"Тариф: <b>{tier}</b>\n"
                     f"Сумма: <b>{amount}$</b>\n\n"
-                    f"Нажми кнопку ниже, оплати, а потом нажми «Я ОПЛАТИЛ»."
+                    f"Оплатите по кнопке ниже и нажмите «Я ОПЛАТИЛ»."
                 ),
                 reply_markup=builder.as_markup()
             )
@@ -655,23 +661,47 @@ async def handle_all_payments(callback: types.CallbackQuery):
     except Exception as e:
         await callback.answer(f"❌ Ошибка: {str(e)}", show_alert=True)
 
-# Хендлер подтверждения
+# --- ТЕХНИЧЕСКИЕ ХЕНДЛЕРЫ ДЛЯ STARS (ОБЯЗАТЕЛЬНО) ---
+
+@dp.pre_checkout_query()
+async def process_pre_checkout_query(pre_checkout_query: types.PreCheckoutQuery):
+    # Без этого подтверждения кнопка "Оплатить" в Telegram не сработает
+    await bot.answer_pre_checkout_query(pre_checkout_query.id, ok=True)
+
+@dp.message(F.successful_payment)
+async def success_payment_handler(message: types.Message):
+    # Начисление баланса после успешной оплаты звездами
+    stars_amount = message.successful_payment.total_amount
+    
+    # Курс: 50 звезд = 1$. Можно поменять под свои нужды.
+    usd_amount = round(stars_amount / 50, 2)
+    
+    save_payment(message.from_user.id, usd_amount, "XTR", "stars_internal", status="paid")
+    add_balance(message.from_user.id, usd_amount)
+    
+    await message.answer(
+        f"✅ <b>Оплата Stars прошла успешно!</b>\n"
+        f"На ваш баланс зачислено: <b>{usd_amount}$</b>"
+    )
+
+# --- ПОДТВЕРЖДЕНИЕ CRYPTOBOT ---
+
 @dp.callback_query(F.data.startswith("conf_"))
 async def confirm_payment(callback: types.CallbackQuery):
     parts = callback.data.split("_")
     amount = float(parts[1])
     invoice_id = parts[2]
-    
-    # Здесь должна быть проверка через API CryptoBot (getInvoices), 
-    # но пока просто имитируем успех для теста:
+
+    # Имитация проверки (здесь можно добавить запрос к API CryptoBot getInvoices)
     save_payment(callback.from_user.id, amount, "USDT", invoice_id, status="paid")
     add_balance(callback.from_user.id, amount)
 
     await callback.answer(f"✅ Платеж {amount}$ подтвержден!", show_alert=True)
     await callback.message.edit_caption(
-        caption=f"💰 <b>Баланс пополнен!</b>\n\nТекущий баланс обновлен.",
+        caption=f"💰 <b>Баланс пополнен!</b>\n\nСумма {amount}$ зачислена на ваш счет.",
         reply_markup=main_menu_kb(callback.from_user.id)
     )
+
 @dp.message(AdminStates.waiting_broadcast)
 async def perform_broadcast(message: types.Message, state: FSMContext):
     # Проверка, что ты админ
