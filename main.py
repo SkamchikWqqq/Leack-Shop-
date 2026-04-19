@@ -64,22 +64,7 @@ storage = MemoryStorage()
 # Правильная инициализация диспетчера для aiogram 3.x
 dp = Dispatcher(storage=storage)
 
-# Хендлер для команды /start
-@dp.message(CommandStart())
-async def cmd_start(message: types.Message):
-    await message.answer("Привет, я онлайн!")
 
-# ЗАПУСК БОТА В РАЗНЫХ ПРОЦЕССАХ
-# ============================================================
-async def start_bot():
-    await dp.start_polling(bot)
-
-def start_bot_in_thread():
-    asyncio.run(start_bot())
-
-# Запуск Flask и бота в отдельных потоках
-if __name__ == "__main__":
-    Thread(target=run_flask, daemon=True).start()
 # ============================================================
 # БД
 # ============================================================
