@@ -592,24 +592,19 @@ async def process_back_menu(callback: types.CallbackQuery):
 
 @dp.callback_query(F.data.startswith("pay_"))
 async def handle_all_payments(callback: types.CallbackQuery):
-    # 1. ОБРАБОТКА TELEGRAM STARS
+    # 1. Если нажали именно на кнопку звёзд
     if "stars" in callback.data:
         parts = callback.data.split("_")
-        # Извлекаем количество звезд из конца callback_data
-        try:
-            stars_amount = int(parts[-1])
-        except (ValueError, IndexError):
-            stars_amount = 50 # Значение по умолчанию
-
+        stars_amount = int(parts[-1]) if parts[-1].isdigit() else 50
         prices = [types.LabeledPrice(label="Пополнение баланса", amount=stars_amount)]
         
         try:
             await bot.send_invoice(
                 chat_id=callback.from_user.id,
-                title="Оплата Telegram Stars",
-                description=f"Пополнение баланса на {stars_amount} ⭐",
+                title="Оплата Stars",
+                description=f"Зачисление {stars_amount} ⭐ на баланс",
                 payload=f"stars_{stars_amount}_{callback.from_user.id}",
-                provider_token="", # Для звезд всегда пусто
+                provider_token="",
                 currency="XTR",
                 prices=prices
             )
@@ -617,6 +612,53 @@ async def handle_all_payments(callback: types.CallbackQuery):
         except Exception as e:
             await callback.answer(f"❌ Ошибка Stars: {e}", show_alert=True)
         return
+
+    # 2. Если выбрали категорию (Osint/Sniper) — создаем инвойс CryptoBot
+    parts = callback.data.split("_")
+    if len(parts) < 4: return
+
+    category = parts[1].upper()
+    tier = parts[2].upper()
+    try:
+        amount = float(parts[3])
+    except: return
+
+    await callback.answer("⏳ Создаю счет...", show_alert=False)
+
+    try:
+        result = await create_invoice(amount=amount, description=f"{category} {tier}")
+        if result.get("ok"):
+            invoice_url = result["result"]["pay_url"]
+            invoice_id = result["result"]["invoice_id"]
+            save_payment(callback.from_user.id, amount, "USDT", str(invoice_id))
+
+            # --- ФОРМИРУЕМ КНОПКИ (ДОБАВЛЯЕМ STARS) ---
+            builder = InlineKeyboardBuilder()
+            # Первая кнопка — Крипта
+            builder.row(InlineKeyboardButton(text=f"💳 Оплатить {amount}$ (Crypto)", url=invoice_url))
+            
+            # Вторая кнопка — Звёзды (Курс 1$ = 50 звёзд)
+            stars_val = int(amount * 50)
+            builder.row(InlineKeyboardButton(text=f"⭐ Оплатить {stars_val} Stars", callback_data=f"pay_stars_{stars_val}"))
+            
+            builder.row(InlineKeyboardButton(text="✅ Я ОПЛАТИЛ", callback_data=f"conf_{amount}_{invoice_id}"))
+            builder.row(InlineKeyboardButton(text="⬅️ Назад", callback_data="catalog"))
+
+            await callback.message.edit_caption(
+                caption=(
+                    f"💳 <b>Оплата тарифа</b>\n\n"
+                    f"Раздел: <b>{category}</b>\n"
+                    f"Тариф: <b>{tier}</b>\n"
+                    f"Сумма: <b>{amount}$</b> / <b>{stars_val} ⭐</b>\n\n"
+                    f"Выберите способ оплаты:"
+                ),
+                reply_markup=builder.as_markup()
+            )
+        else:
+            await callback.answer("❌ Ошибка CryptoBot API", show_alert=True)
+    except Exception as e:
+        await callback.answer(f"❌ Ошибка: {str(e)}", show_alert=True)
+
 
     # 2. ОБРАБОТКА CRYPTOBOT
     # Ожидаемый формат: pay_osint_basic_2 (категория, тариф, сумма)
