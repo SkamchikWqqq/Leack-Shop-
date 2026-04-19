@@ -33,7 +33,7 @@ def run_flask():
     app.run(host='0.0.0.0', port=port)
 
 # 3. ТВОИ НАСТРОЙКИ (КОНСТАНТЫ)
-BOT_TOKEN = os.getenv("BOT_TOKEN", "8798655968:AAEGVzmu2RPbI2z6UqBeuUjZQWkTuWbzGqM")
+BOT_TOKEN = os.getenv("BOT_TOKEN", "8798655968:AAFS1WJYtTzWwg8cDB1kwdTOLTsneZVNmM0")
 CRYPTOBOT_API_TOKEN = os.getenv("CRYPTOBOT_API_TOKEN", "553441:AAd905Dra8Qp1GdSHuBbnWJNj8DfZYIXljf")
 
 ADMIN_IDS = []
