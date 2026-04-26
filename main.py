@@ -103,9 +103,9 @@ def init_db():
         created_at TEXT
     )""")
 
-    # --- ДОБАВЬ ЭТУ СТРОКУ НИЖЕ ---
+    # --- ДОБАВЬ ЭТУ СТРОКУ ПРЯМО ЗДЕСЬ ---
     c.execute("CREATE TABLE IF NOT EXISTS channels (id INTEGER PRIMARY KEY AUTOINCREMENT, channel_id TEXT, url TEXT)")
-    # ------------------------------
+    # ------------------------------------
 
     conn.commit()
     conn.close()
