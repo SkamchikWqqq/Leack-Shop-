@@ -241,6 +241,7 @@ class AdminStates(StatesGroup):
     waiting_promo_uses = State()
     waiting_promo_amount = State()
     promo_type = State()
+    waiting_channel_data = State()
 
 class UserStates(StatesGroup):
     waiting_promo_input = State()
