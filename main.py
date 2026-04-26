@@ -432,8 +432,7 @@ async def cmd_start(message: types.Message):
 
     # ПРОВЕРКА ПОДПИСКИ (Динамическая из базы данных)
     channels = get_channels_db()
-    
-    # Если в админке еще не добавлено ни одного канала — просто пускаем в меню
+
     if not channels:
         await send_main_menu(message.from_user.id, message.chat.id)
         return
@@ -441,22 +440,20 @@ async def cmd_start(message: types.Message):
     not_subscribed = []
     for cid, url in channels:
         try:
-            # Проверяем каждый канал из базы
             chat_member = await bot.get_chat_member(chat_id=cid, user_id=user.id)
             if chat_member.status in ["left", "kicked"]:
                 not_subscribed.append(url)
         except Exception as e:
             logger.error(f"Ошибка проверки канала {cid}: {e}")
             continue
-            
+
     if not_subscribed:
-        # Формируем кнопки только для тех каналов, на которые юзер не подписан
         builder = InlineKeyboardBuilder()
         for i, url in enumerate(not_subscribed, 1):
             builder.row(InlineKeyboardButton(text=f"📢 Подписаться на канал №{i}", url=url))
-        
+
         builder.row(InlineKeyboardButton(text="✅ Я подписался", callback_data="check_sub"))
-        
+
         try:
             photo = FSInputFile(IMAGE_PATH)
             await message.answer_photo(
@@ -471,25 +468,7 @@ async def cmd_start(message: types.Message):
             )
         return
 
-    # Если подписан на всё — отправляем меню
     await send_main_menu(message.from_user.id, message.chat.id)
-
-@dp.callback_query(F.data == "check_sub")
-async def check_sub_callback(callback: types.CallbackQuery):
-    # Используем общую функцию проверки для кнопки подтверждения
-    is_all_subbed = await check_subscription(callback.bot, callback.from_user.id)
-    
-    if not is_all_subbed:
-        await callback.answer("❌ Вы подписались не на все каналы!", show_alert=True)
-        return
-    
-    try:
-        await callback.message.delete()
-    except:
-        pass
-        
-    await send_main_menu(callback.from_user.id, callback.message.chat.id)
-    await callback.answer()
 
 # --------- КАТАЛОГ ---------
 @dp.callback_query(F.data == "catalog")
