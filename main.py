@@ -338,17 +338,17 @@ def promo_type_kb():
 # ОБНОВЛЕННАЯ ПРОВЕРКА ПОДПИСКИ (ДЛЯ ВСЕХ КАНАЛОВ ИЗ БАЗЫ)
 # ============================================================
 async def check_subscription(bot: Bot, user_id: int) -> bool:
-    channels = get_channels_db()
+    channels = get_channels_db() # Берем все каналы из базы
     if not channels:
-        return True # Если в базе нет каналов, доступ разрешен
+        return True
     
     for cid, url in channels:
         try:
             member = await bot.get_chat_member(chat_id=cid, user_id=user_id)
             if member.status in ("left", "kicked"):
-                return False # Нашел канал, на который юзер не подписан
+                return False # Если хоть на один не подписан — проверка не пройдена
         except Exception:
-            continue # Если ошибка (например, бота выгнали из канала), идем дальше
+            continue 
     return True
 
 def sub_check_kb():
