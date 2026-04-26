@@ -272,8 +272,8 @@ def main_menu_kb(user_id=None):
     if admin:
         builder.row(InlineKeyboardButton(text="📣 Рассылка", callback_data="broadcast"))
         builder.row(InlineKeyboardButton(text="🎟 Генерация промо", callback_data="gen_promo"))
-    
-builder.row(InlineKeyboardButton(text="➕ Добавить ОП", callback_data="admin_add_channel"))
+        # Эти строки должны иметь такой же отступ, как и верхние:
+        builder.row(InlineKeyboardButton(text="➕ Добавить ОП", callback_data="admin_add_channel"))
         builder.row(InlineKeyboardButton(text="❌ Удалить ОП", callback_data="admin_list_channels"))
 
     return builder.as_markup()
