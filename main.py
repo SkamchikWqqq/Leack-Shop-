@@ -102,6 +102,33 @@ def init_db():
         status TEXT,
         created_at TEXT
     )""")
+
+    # --- ДОБАВЬ ЭТУ СТРОКУ НИЖЕ ---
+    c.execute("CREATE TABLE IF NOT EXISTS channels (id INTEGER PRIMARY KEY AUTOINCREMENT, channel_id TEXT, url TEXT)")
+    # ------------------------------
+
+    conn.commit()
+    conn.close()
+
+def add_channel_db(channel_id, url):
+    conn = sqlite3.connect("bot.db")
+    c = conn.cursor()
+    c.execute("INSERT INTO channels (channel_id, url) VALUES (?, ?)", (str(channel_id), url))
+    conn.commit()
+    conn.close()
+
+def get_channels_db():
+    conn = sqlite3.connect("bot.db")
+    c = conn.cursor()
+    c.execute("SELECT channel_id, url FROM channels")
+    rows = c.fetchall()
+    conn.close()
+    return rows
+
+def delete_channel_db(channel_id):
+    conn = sqlite3.connect("bot.db")
+    c = conn.cursor()
+    c.execute("DELETE FROM channels WHERE channel_id = ?", (str(channel_id),))
     conn.commit()
     conn.close()
 
