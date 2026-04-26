@@ -335,20 +335,26 @@ def promo_type_kb():
     return builder.as_markup()
 
 # ============================================================
-# ПРОВЕРКА ПОДПИСКИ
+# ОБНОВЛЕННАЯ ПРОВЕРКА ПОДПИСКИ (ДЛЯ ВСЕХ КАНАЛОВ ИЗ БАЗЫ)
 # ============================================================
 async def check_subscription(bot: Bot, user_id: int) -> bool:
-    try:
-        member = await bot.get_chat_member(chat_id=CHANNEL_ID, user_id=user_id)
-        return member.status in ("member", "administrator", "creator")
-    except Exception:
-        return False
+    channels = get_channels_db()
+    if not channels:
+        return True # Если в базе нет каналов, доступ разрешен
+    
+    for cid, url in channels:
+        try:
+            member = await bot.get_chat_member(chat_id=cid, user_id=user_id)
+            if member.status in ("left", "kicked"):
+                return False # Нашел канал, на который юзер не подписан
+        except Exception:
+            continue # Если ошибка (например, бота выгнали из канала), идем дальше
+    return True
 
 def sub_check_kb():
-    builder = InlineKeyboardBuilder()
-    builder.row(InlineKeyboardButton(text="📢 Подписаться на канал", url=CHANNEL_INVITE))
-    builder.row(InlineKeyboardButton(text="✅ Я подписался", callback_data="check_sub"))
-    return builder.as_markup()
+    # Теперь эта функция будет вызываться динамически в CommandStart
+    # Мы создадим кнопки прямо там, так как ссылки теперь в базе
+    pass 
 
 # ============================================================
 # CRYPTOBOT
