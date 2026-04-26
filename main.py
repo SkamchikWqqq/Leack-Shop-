@@ -742,6 +742,42 @@ async def perform_broadcast(message: types.Message, state: FSMContext):
     await message.answer(f"✅ Рассылка завершена! Сообщение получили {count} человек.")
     await state.clear()
 
+@dp.callback_query(F.data == "admin_add_channel")
+async def admin_add_channel_start(callback: types.CallbackQuery, state: FSMContext):
+    if callback.from_user.username.lower() not in ADMIN_USERNAMES: return
+    await callback.message.answer("Введите ID канала и ссылку через пробел.\nПример:\n-100123456789 https://t.me/channel")
+    await state.set_state(AdminStates.waiting_channel_data)
+    await callback.answer()
+
+@dp.message(AdminStates.waiting_channel_data)
+async def admin_process_add_channel(message: types.Message, state: FSMContext):
+    try:
+        cid, url = message.text.split(" ")
+        add_channel_db(cid, url)
+        await message.answer(f"✅ Канал добавлен!")
+        await state.clear()
+    except:
+        await message.answer("❌ Ошибка! Формат: ID[пробел]ССЫЛКА")
+
+@dp.callback_query(F.data == "admin_list_channels")
+async def admin_list_channels(callback: types.CallbackQuery):
+    channels = get_channels_db()
+    if not channels:
+        await callback.answer("Список пуст!", show_alert=True)
+        return
+    builder = InlineKeyboardBuilder()
+    for cid, url in channels:
+        builder.row(InlineKeyboardButton(text=f"Удалить {cid}", callback_data=f"del_ch_{cid}"))
+    builder.row(InlineKeyboardButton(text="⬅️ Назад", callback_data="back_menu"))
+    await callback.message.edit_caption(caption="Список каналов ОП:", reply_markup=builder.as_markup())
+
+@dp.callback_query(F.data.startswith("del_ch_"))
+async def admin_del_channel(callback: types.CallbackQuery):
+    cid = callback.data.replace("del_ch_", "")
+    delete_channel_db(cid)
+    await callback.answer("Удалено!", show_alert=True)
+    await admin_list_channels(callback)
+
 # ============================================================
 # ЗАПУСК
 # ============================================================
