@@ -430,42 +430,62 @@ async def cmd_start(message: types.Message):
     if user.username and user.username.lower() in ADMIN_USERNAMES:
         set_admin(user.id)
 
-    # ПРОВЕРКА ПОДПИСКИ (Обязательно передаем bot)
-    subscribed = await check_subscription(bot, user.id) 
-    if not subscribed:
+    # ПРОВЕРКА ПОДПИСКИ (Динамическая из базы данных)
+    channels = get_channels_db()
+    
+    # Если в админке еще не добавлено ни одного канала — просто пускаем в меню
+    if not channels:
+        await send_main_menu(message.from_user.id, message.chat.id)
+        return
+
+    not_subscribed = []
+    for cid, url in channels:
+        try:
+            # Проверяем каждый канал из базы
+            chat_member = await bot.get_chat_member(chat_id=cid, user_id=user.id)
+            if chat_member.status in ["left", "kicked"]:
+                not_subscribed.append(url)
+        except Exception as e:
+            logger.error(f"Ошибка проверки канала {cid}: {e}")
+            continue
+            
+    if not_subscribed:
+        # Формируем кнопки только для тех каналов, на которые юзер не подписан
+        builder = InlineKeyboardBuilder()
+        for i, url in enumerate(not_subscribed, 1):
+            builder.row(InlineKeyboardButton(text=f"📢 Подписаться на канал №{i}", url=url))
+        
+        builder.row(InlineKeyboardButton(text="✅ Я подписался", callback_data="check_sub"))
+        
         try:
             photo = FSInputFile(IMAGE_PATH)
             await message.answer_photo(
                 photo=photo,
-                caption=(
-                    "👋 Добро пожаловать!\n\n"
-                    "❗️ Для доступа к боту необходимо подписаться на наш канал."
-                ),
-                reply_markup=sub_check_kb()
+                caption="👋 <b>Добро пожаловать!</b>\n\n❗️ Для доступа к функциям бота необходимо подписаться на наши каналы:",
+                reply_markup=builder.as_markup()
             )
         except Exception:
             await message.answer(
-                "👋 Добро пожаловать!\n\n"
-                "❗️ Для доступа к боту необходимо подписаться на наш канал.",
-                reply_markup=sub_check_kb()
+                "👋 <b>Добро пожаловать!</b>\n\n❗️ Для доступа к функциям бота необходимо подписаться на наши каналы:",
+                reply_markup=builder.as_markup()
             )
         return
 
+    # Если подписан на всё — отправляем меню
     await send_main_menu(message.from_user.id, message.chat.id)
 
 @dp.callback_query(F.data == "check_sub")
 async def check_sub_callback(callback: types.CallbackQuery):
-    # ИСПРАВЛЕНО: Добавлен аргумент callback.bot
-    subscribed = await check_subscription(callback.bot, callback.from_user.id)
+    # Используем общую функцию проверки для кнопки подтверждения
+    is_all_subbed = await check_subscription(callback.bot, callback.from_user.id)
     
-    if not subscribed:
-        await callback.answer("❌ Ты ещё не подписался на канал!", show_alert=True)
+    if not is_all_subbed:
+        await callback.answer("❌ Вы подписались не на все каналы!", show_alert=True)
         return
     
-    # Если подписался — удаляем старое и шлем меню
     try:
         await callback.message.delete()
-    except Exception:
+    except:
         pass
         
     await send_main_menu(callback.from_user.id, callback.message.chat.id)
