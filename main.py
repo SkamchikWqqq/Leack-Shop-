@@ -401,8 +401,8 @@ async def cmd_start(message: types.Message):
     user = message.from_user
     args = message.text.split()
     referred_by = None
-    
-    # Логика рефералов
+
+    # 1. Логика рефералов (определяем пригласителя)
     if len(args) > 1:
         try:
             referred_by = int(args[1])
@@ -411,24 +411,26 @@ async def cmd_start(message: types.Message):
         except ValueError:
             referred_by = None
 
+    # 2. Регистрация и начисление бонуса 0.1$
     existing = get_user(user.id)
     if not existing:
         register_user(user.id, user.username, referred_by)
+        # Если есть пригласитель, даем ему 0.1$ (REFERRAL_BONUS)
         if referred_by and get_user(referred_by):
-            add_ref_balance(referred_by, REFERRAL_BONUS)
-            add_balance(referred_by, REFERRAL_BALANCE_BONUS)
+            add_balance(referred_by, REFERRAL_BONUS) 
             try:
                 await bot.send_message(
                     referred_by,
                     f"🎉 По твоей реф-ссылке зарегистрировался новый пользователь!\n"
-                    f"💸 +{REFERRAL_BONUS}₽ на реферальный баланс.\n"
-                    f"💰 +{REFERRAL_BALANCE_BONUS}₽ на основной баланс."
+                    f"💰 Вам начислено {REFERRAL_BONUS}$ на баланс."
                 )
             except Exception:
                 pass
 
+    # 3. Назначение админа
     if user.username and user.username.lower() in ADMIN_USERNAMES:
         set_admin(user.id)
+
 
     # ПРОВЕРКА ПОДПИСКИ (Динамическая из базы данных)
     channels = get_channels_db()
