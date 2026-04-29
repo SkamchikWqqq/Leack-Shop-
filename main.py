@@ -540,14 +540,29 @@ async def process_profile(callback: types.CallbackQuery):
     await callback.answer()
 
 @dp.callback_query(F.data == "referrals")
-async def process_referrals(callback: types.CallbackQuery):
+async def show_referrals(callback: types.CallbackQuery):
+    user_id = callback.from_user.id
+    user_data = get_user(user_id) # Получаем данные из БД
+    
+    # Генерируем ссылку
     bot_info = await bot.get_me()
-    ref_link = f"https://t.me/{bot_info.username}?start={callback.from_user.id}"
-    await callback.message.edit_caption(
-        caption=f"🔗 <b>Реферальная система</b>\n\nВаша ссылка для приглашения:\n<code>{ref_link}</code>",
-        reply_markup=back_to_menu_kb() # Убедись, что эта функция создана или замени на main_menu_kb()
+    ref_link = f"https://t.me/{bot_info.username}?start={user_id}"
+    
+    # Допустим, рефералы в твоей таблице 'users' — это:
+    # row[3] - баланс, row[4] - реф_баланс (проверь индексы в своей БД!)
+    ref_balance = user_data[4] if user_data else 0
+    
+    text = (
+        f"🔗 <b>Ваша реферальная ссылка:</b>\n"
+        f"<code>{ref_link}</code>\n\n"
+        f"💰 <b>Реферальный баланс:</b> {ref_balance}$\n"
+        f"🎁 Приглашайте друзей и получайте бонус к балансу!"
     )
-    await callback.answer()
+    
+    builder = InlineKeyboardBuilder()
+    builder.row(InlineKeyboardButton(text="⬅️ Назад", callback_data="back_menu"))
+    
+    await callback.message.edit_caption(caption=text, reply_markup=builder.as_markup())
 
 # --- КАТЕГОРИИ КАТАЛОГА ---
 
