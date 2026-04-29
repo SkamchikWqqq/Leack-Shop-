@@ -705,23 +705,37 @@ async def handle_all_payments(callback: types.CallbackQuery):
     except Exception as e:
         await callback.answer(f"❌ Ошибка: {str(e)}", show_alert=True)
 
-# --- ПОДТВЕРЖДЕНИЕ CRYPTOBOT ---
-
+# --- ПОДТВЕРЖДЕНИЕ CRYPTOBOT (ИСПРАВЛЕНО) ---
 @dp.callback_query(F.data.startswith("conf_"))
 async def confirm_payment(callback: types.CallbackQuery):
     parts = callback.data.split("_")
     amount = float(parts[1])
     invoice_id = parts[2]
 
-    # Имитация проверки (здесь можно добавить запрос к API CryptoBot getInvoices)
-    save_payment(callback.from_user.id, amount, "USDT", invoice_id, status="paid")
-    add_balance(callback.from_user.id, amount)
+    # Реальная проверка через API CryptoPay
+    url = f"https://pay.crypt.bot/api/getInvoices?invoice_ids={invoice_id}"
+    headers = {"Crypto-Pay-API-Token": CRYPTOBOT_API_TOKEN}
 
-    await callback.answer(f"✅ Платеж {amount}$ подтвержден!", show_alert=True)
-    await callback.message.edit_caption(
-        caption=f"💰 <b>Баланс пополнен!</b>\n\nСумма {amount}$ зачислена на ваш счет.",
-        reply_markup=main_menu_kb(callback.from_user.id)
-    )
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url, headers=headers) as response:
+            data = await response.json()
+            
+            if data.get("ok"):
+                invoices = data.get("result", {}).get("items", [])
+                if invoices and invoices[0].get("status") == "paid":
+                    # Если статус реально 'paid', тогда зачисляем
+                    save_payment(callback.from_user.id, amount, "USDT", invoice_id, status="paid")
+                    add_balance(callback.from_user.id, amount)
+
+                    await callback.answer(f"✅ Платеж {amount}$ подтвержден!", show_alert=True)
+                    await callback.message.edit_caption(
+                        caption=f"💰 <b>Баланс пополнен!</b>\n\nСумма {amount}$ зачислена на ваш счет.",
+                        reply_markup=main_menu_kb(callback.from_user.id)
+                    )
+                    return
+
+    # Если мы дошли сюда, значит оплата не найдена
+    await callback.answer("❌ Оплата еще не поступила или инвойс не найден.", show_alert=True)
 
 @dp.message(AdminStates.waiting_broadcast)
 async def perform_broadcast(message: types.Message, state: FSMContext):
